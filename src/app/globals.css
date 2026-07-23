@@ -24,3 +24,66 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ==========================================
+   Kendo UI Theme Customizations
+   ========================================== */
+
+:root {
+  /* Replace Kendo's default red/orange accent with Key360 brand green */
+  --kendo-color-primary: #0b6b0b;
+  --kendo-color-primary-hover: #085408;
+  --kendo-color-primary-active: #064006;
+  --kendo-color-primary-focus: rgba(11, 107, 11, 0.25);
+  
+  --kendo-selection-bg: rgba(11, 107, 11, 0.1);
+  --kendo-selection-text: #0b6b0b;
+
+  --kendo-color-link: #0b6b0b;
+  --kendo-color-link-hover: #085408;
+}
+
+/* Customize PanelBar to match Sidebar's dark-slate background */
+.k-panelbar {
+  background-color: transparent !important;
+  border: none !important;
+  color: #cbd5e1 !important; /* slate-300 */
+}
+
+.k-panelbar .k-item, 
+.k-panelbar .k-panelbar-item {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.k-panelbar .k-link {
+  color: #cbd5e1 !important; /* slate-300 */
+  background-color: transparent !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+.k-panelbar .k-link:hover {
+  color: #f8fafc !important; /* slate-50 */
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.k-panelbar .k-link.k-selected {
+  color: #4ade80 !important; /* green-400 */
+  background-color: rgba(11, 107, 11, 0.15) !important;
+  border-left: 3px solid #22c55e !important; /* green-500 */
+  border-radius: 0 6px 6px 0 !important;
+  font-weight: 600 !important;
+}
+
+.k-panelbar .k-panelbar-group {
+  background-color: transparent !important;
+  border: none !important;
+  padding-left: 12px !important;
+}
+
+.k-panelbar .k-panelbar-collapse,
+.k-panelbar .k-panelbar-expand {
+  color: #64748b !important; /* slate-500 */
+}
