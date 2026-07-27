@@ -14,6 +14,8 @@ import {
 } from "@progress/kendo-react-gantt";
 import { getter } from "@progress/kendo-react-common";
 import { GridColumn } from "@/types/metadata";
+import { Button } from "@progress/kendo-react-buttons";
+import { pencilIcon, trashIcon } from "@progress/kendo-svg-icons";
 
 interface GenericGanttProps {
   data: any[];
@@ -98,24 +100,24 @@ export default function GenericGantt({
     const item = props.dataItem;
     return (
       <td style={{ textAlign: "right" }} className="px-6 py-3 space-x-2 actions-cell">
-        <button
+        <Button
+          svgIcon={pencilIcon}
+          title="Edit Record"
           onClick={(e) => {
             e.stopPropagation();
             if (onEdit) onEdit(item);
           }}
-          className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 px-2.5 py-1 rounded transition-colors cursor-pointer text-xs font-semibold"
-        >
-          Edit
-        </button>
-        <button
+          className="p-1.5 hover:bg-indigo-50 rounded text-indigo-600 hover:text-indigo-800 border-none bg-transparent cursor-pointer"
+        />
+        <Button
+          svgIcon={trashIcon}
+          title="Delete Record"
           onClick={(e) => {
             e.stopPropagation();
             if (onDelete) onDelete(item);
           }}
-          className="text-rose-600 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded transition-colors cursor-pointer text-xs font-semibold"
-        >
-          Delete
-        </button>
+          className="p-1.5 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 border-none bg-transparent cursor-pointer"
+        />
       </td>
     );
   }, [onEdit, onDelete]);

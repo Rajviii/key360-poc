@@ -50,6 +50,7 @@ import {
   trashIcon,
   saveIcon,
   cancelIcon,
+  hyperlinkOpenIcon,
 } from "@progress/kendo-svg-icons";
 
 interface GenericGridProps {
@@ -574,7 +575,7 @@ export default function GenericGrid({
     return (
       <td className="px-6 py-3 text-right text-sm font-medium space-x-2 actions-cell">
         <Button
-          svgIcon={pencilIcon}
+          svgIcon={hyperlinkOpenIcon}
           title="Edit Record (Popup)"
           onClick={(e) => {
             e.stopPropagation();
@@ -751,6 +752,7 @@ export default function GenericGrid({
                     setColumns={setGridColumns}
                     onOpenReorderWindow={handleOpenReorder}
                     onOpenResizeWindow={handleOpenResize}
+                    data={data}
                   />
                 )}
               />

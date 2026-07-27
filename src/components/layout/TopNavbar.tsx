@@ -9,7 +9,7 @@ interface TopNavbarProps {
 
 export default function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
     return (
-        <header className="h-16 bg-green-700 text-white flex items-center justify-between px-6 shadow-md z-10 flex-shrink-0">
+        <header className="h-16 bg-gradient-to-r from-green-800 via-green-750 to-emerald-700 text-white flex items-center justify-between px-6 shadow-md z-10 flex-shrink-0">
             <div className="flex items-center gap-4">
                 {/* Hamburger Icon */}
                 <button 

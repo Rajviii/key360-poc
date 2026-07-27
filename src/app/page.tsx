@@ -6,6 +6,16 @@ import ContentLayout from "@/components/layout/ContentLayout";
 import { timesheetService } from "@/services/timesheetService";
 import { Timesheet } from "@/types/timesheet";
 import Link from "next/link";
+import {
+  Chart,
+  ChartSeries,
+  ChartSeriesItem,
+  ChartCategoryAxis,
+  ChartCategoryAxisItem,
+  ChartValueAxis,
+  ChartValueAxisItem,
+  ChartTooltip,
+} from "@progress/kendo-react-charts";
 
 export default function Dashboard() {
   const [data, setData] = useState<Timesheet[]>([]);
@@ -30,7 +40,7 @@ export default function Dashboard() {
     const totalHours = data.reduce((sum, item) => sum + item.hours, 0);
     const pendingCount = data.filter((item) => item.status === "Pending Approval").length;
     const draftCount = data.filter((item) => item.status === "Draft").length;
-    
+
     // Unique employees
     const employees = new Set(data.map((item) => item.employeeName));
     const activeEmployees = employees.size;
@@ -41,6 +51,34 @@ export default function Dashboard() {
       draftCount,
       activeEmployees,
     };
+  }, [data]);
+
+  // Group and compute chart trend data
+  const chartData = React.useMemo(() => {
+    const dailyMap: Record<string, number> = {};
+
+    // Seed standard range of dates to make a beautiful smooth line chart
+    const days = ["2026-07-18", "2026-07-19", "2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24"];
+    days.forEach(d => { dailyMap[d] = 0; });
+
+    data.forEach((item) => {
+      const dateStr = item.date;
+      if (dateStr) {
+        dailyMap[dateStr] = (dailyMap[dateStr] || 0) + (Number(item.hours) || 0);
+      }
+    });
+
+    const sortedDates = Object.keys(dailyMap).sort();
+    return sortedDates.map((date) => {
+      const formattedDate = new Date(date).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+      return {
+        date: formattedDate,
+        hours: dailyMap[date],
+      };
+    });
   }, [data]);
 
   return (
@@ -126,6 +164,42 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Premium Chart Trend Analysis */}
+            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="font-bold text-slate-900 text-base">Hours Logged Trend</h4>
+                  <p className="text-xs text-slate-400">Daily aggregate of operational hours recorded across your workspaces</p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-100">
+                  <span className="text-[10px] bg-white shadow-sm border border-slate-100 text-green-700 font-bold px-2 py-1 rounded">
+                    Trend Analysis
+                  </span>
+                </div>
+              </div>
+              <div className="h-64">
+                <Chart style={{ height: "100%" }}>
+                  <ChartCategoryAxis>
+                    <ChartCategoryAxisItem categories={chartData.map((d) => d.date)} />
+                  </ChartCategoryAxis>
+                  <ChartValueAxis>
+                    <ChartValueAxisItem title={{ text: "Hours" }} />
+                  </ChartValueAxis>
+                  <ChartSeries>
+                    <ChartSeriesItem
+                      type="area"
+                      data={chartData.map((d: { hours: number; date: string }) => d.hours)}
+                      color="#0b6b0b"
+                      opacity={0.15}
+                      markers={{ visible: true, size: 6, border: { color: "#0b6b0b", width: 2 } }}
+                      line={{ style: "smooth", width: 3 }}
+                    />
+                  </ChartSeries>
+                  <ChartTooltip render={(props: any) => `${props?.value?.toFixed(1)} hours`} />
+                </Chart>
+              </div>
+            </div>
+
             {/* Dashboard Content split layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Recent Activity List */}
@@ -151,13 +225,12 @@ export default function Dashboard() {
                       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                         <span className="text-xs text-slate-400 font-medium">{item.date}</span>
                         <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                            item.status === "Approved"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-150"
-                              : item.status === "Pending Approval"
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.status === "Approved"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-150"
+                            : item.status === "Pending Approval"
                               ? "bg-amber-50 text-amber-700 border-amber-150"
                               : "bg-slate-50 text-slate-700 border-slate-150"
-                          }`}
+                            }`}
                         >
                           {item.status}
                         </span>

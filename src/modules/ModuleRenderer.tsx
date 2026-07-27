@@ -93,11 +93,11 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
     setLoading(true);
     try {
       const payload = { ...formData };
-      
+
       // Parse numeric types
       if (payload.hours) payload.hours = Number(payload.hours);
       if (payload.percentComplete) payload.percentComplete = Number(payload.percentComplete);
-      
+
       if (dialogMode === "add") {
         await service.create(payload);
       } else if (dialogMode === "edit" && selectedItem) {
@@ -121,7 +121,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
 
     const fields = config.gridColumns.map(c => c.field);
     const headers = config.gridColumns.map(c => c.title);
-    
+
     // Flat mapping function to handle nested task trees if it's Gantt data
     const getFlatRows = (nodes: any[]): any[] => {
       let flat: any[] = [];
@@ -163,6 +163,53 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
     return selectedItem.employeeName || selectedItem.title || `ID: ${selectedItem.id}`;
   };
 
+  // Dynamic Module KPIs
+  const stats = React.useMemo(() => {
+    if (!data || data.length === 0) return null;
+
+    if (config.id === "timesheets") {
+      const totalHours = data.reduce((sum, item) => sum + (Number(item.hours) || 0), 0);
+      const pendingCount = data.filter((item) => item.status === "Pending Approval").length;
+      const approvedCount = data.filter((item) => item.status === "Approved").length;
+      const totalLogs = data.length;
+
+      return [
+        { label: "Total Hours Logged", value: `${totalHours.toFixed(1)} hrs`, color: "text-slate-900", subtext: "Across all workspaces", icon: "🕒" },
+        { label: "Pending Approvals", value: pendingCount, color: "text-amber-600", subtext: "Awaiting manager action", icon: "⏳" },
+        { label: "Approved Records", value: approvedCount, color: "text-emerald-600", subtext: "Processed & finalized", icon: "✅" },
+        { label: "Total Submissions", value: totalLogs, color: "text-blue-600", subtext: "Total recorded logs", icon: "📊" },
+      ];
+    }
+
+    if (config.id === "project-planning") {
+      const getFlatTasks = (tasksList: any[]): any[] => {
+        let flat: any[] = [];
+        tasksList.forEach((t) => {
+          flat.push(t);
+          if (t.children && t.children.length > 0) {
+            flat = flat.concat(getFlatTasks(t.children));
+          }
+        });
+        return flat;
+      };
+
+      const flatTasks = getFlatTasks(data);
+      const totalTasks = flatTasks.length;
+      const avgProgress = flatTasks.reduce((sum, item) => sum + (Number(item.percentComplete) || 0), 0) / (totalTasks || 1);
+      const completedCount = flatTasks.filter((item) => Number(item.percentComplete) >= 1.0).length;
+      const inProgressCount = flatTasks.filter((item) => Number(item.percentComplete) > 0 && Number(item.percentComplete) < 1.0).length;
+
+      return [
+        { label: "Total Tasks", value: totalTasks, color: "text-slate-900", subtext: "Planning breakdown structures", icon: "📋" },
+        { label: "Average Progress", value: `${(avgProgress * 100).toFixed(0)}%`, color: "text-blue-600", subtext: "Overall project completion", icon: "📈" },
+        { label: "Completed Tasks", value: completedCount, color: "text-emerald-600", subtext: "100% complete tasks", icon: "✅" },
+        { label: "In Progress Tasks", value: inProgressCount, color: "text-amber-600", subtext: "Currently active items", icon: "⚙️" },
+      ];
+    }
+
+    return null;
+  }, [data, config.id]);
+
   return (
     <AppLayout>
       <ContentLayout
@@ -170,6 +217,30 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
         breadcrumbItems={config.breadcrumbs}
       >
         <div className="space-y-6">
+          {/* Dynamic Module-specific KPI Stats Row */}
+          {stats && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {stats.map((stat, i) => (
+                <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between hover:shadow-md transition-all duration-200">
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+                      {stat.label}
+                    </span>
+                    <h3 className={`text-2xl font-extrabold tracking-tight ${stat.color}`}>
+                      {stat.value}
+                    </h3>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      {stat.subtext}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-xl shadow-sm border border-slate-100">
+                    {stat.icon}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Metadata-driven Toolbar */}
           <ModuleToolbar
             buttons={config.toolbarButtons}
@@ -216,7 +287,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
                   try {
                     if (payload.hours) payload.hours = Number(payload.hours);
                     if (payload.percentComplete) payload.percentComplete = Number(payload.percentComplete);
-                    
+
                     await service.update(id, payload);
                     await fetchData();
                   } catch (err) {
