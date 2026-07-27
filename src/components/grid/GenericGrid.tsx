@@ -16,9 +16,10 @@ import {
 } from "@progress/kendo-react-grid";
 import type { GridToolbarAIAssistantHandle } from "@progress/kendo-react-grid";
 import { process, State } from "@progress/kendo-data-query";
-import { GridColumn } from "@/types/metadata";
 import { Button } from "@progress/kendo-react-buttons";
+import { Popup } from "@progress/kendo-react-popup";
 import { CustomColumnMenu } from "./CustomColumnMenu";
+import { GridColumn } from "@/types/metadata";
 
 // Premium Chart Integration imports
 import {
@@ -78,6 +79,7 @@ export default function GenericGrid({
 }: GenericGridProps) {
   // Premium Chart Integration states & refs
   const gridRef = useRef<GridHandle>(null);
+  const columnsBtnRef = useRef<any>(null);
   const offset = useRef({ left: 0, top: 0 });
   const [mounted, setMounted] = useState(false);
   React.useEffect(() => {
@@ -733,39 +735,14 @@ export default function GenericGrid({
           )}
           <GridToolbarSpacer />
 
-          <div className="relative flex gap-2">
-            <div className="relative">
-              <Button
-                onClick={() => setShowColumnChooser(!showColumnChooser)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
-              >
-                Columns
-              </Button>
-
-              {showColumnChooser && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-[100] py-2 text-sm text-slate-700">
-                  <div className="px-3 py-1 font-semibold text-xs text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
-                    Toggle Columns
-                  </div>
-                  <div className="max-h-60 overflow-y-auto px-1">
-                    {columns.map((col) => (
-                      <label
-                        key={col.field}
-                        className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 rounded cursor-pointer select-none"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={!!visibleFields[col.field]}
-                          onChange={() => toggleColumn(col.field)}
-                          className="rounded border-slate-300 text-green-600 focus:ring-green-500"
-                        />
-                        <span>{col.title}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+          <div className="flex gap-2">
+            <Button
+              ref={columnsBtnRef}
+              onClick={() => setShowColumnChooser((prev) => !prev)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+            >
+              Columns
+            </Button>
 
             <Button
               svgIcon={arrowRotateCcwIcon}
@@ -830,6 +807,43 @@ export default function GenericGrid({
           cells={{ data: ActionsCell }}
         />
       </Grid>
+
+      {/* Column Chooser Dropdown (Kendo React Popup Component) */}
+      <Popup
+        anchor={columnsBtnRef.current?.element || columnsBtnRef.current}
+        show={showColumnChooser}
+        anchorAlign={{ horizontal: "right", vertical: "bottom" }}
+        popupAlign={{ horizontal: "right", vertical: "top" }}
+        onMouseDownOutside={() => setShowColumnChooser(false)}
+      >
+        <div className="bg-white border border-slate-200 rounded-lg shadow-xl p-3.5 w-60 text-slate-700 font-sans z-[99999]">
+          <div className="font-semibold text-slate-800 text-sm mb-2.5 border-b border-slate-100 pb-2 flex items-center justify-between">
+            <span>Show/Hide Columns:</span>
+            <button
+              onClick={() => setShowColumnChooser(false)}
+              className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            {columns.map((col) => (
+              <label
+                key={col.field}
+                className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer select-none border border-transparent hover:border-slate-100 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={!!visibleFields[col.field]}
+                  onChange={() => toggleColumn(col.field)}
+                  className="rounded border-slate-300 text-green-600 focus:ring-green-500 w-4 h-4 cursor-pointer"
+                />
+                <span className="text-sm font-medium text-slate-700">{col.title}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </Popup>
 
       {/* Reorder Columns Modal */}
       {isReorderOpen && (

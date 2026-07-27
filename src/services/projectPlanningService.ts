@@ -11,7 +11,7 @@ export interface GanttTask {
   isExpanded?: boolean;
   isInEdit?: boolean;
   children?: GanttTask[];
-  parentId?: number | null;
+  parentId?: number | string | null;
 }
 
 export interface GanttDependency {
@@ -118,8 +118,8 @@ export const projectPlanningService = {
     return task ? { ...task, start: new Date(task.start), end: new Date(task.end) } : undefined;
   },
 
-  // Create a new task (e.g. at the root level for simplification)
-  async create(record: Omit<GanttTask, "id">): Promise<GanttTask> {
+  // Create a new task (root level or nested under parentId)
+  async create(record: Omit<GanttTask, "id"> & { parentId?: any }): Promise<GanttTask> {
     await delay(400);
     // Find maximum ID
     let maxId = 0;
@@ -131,14 +131,27 @@ export const projectPlanningService = {
     };
     findMaxId(mockTasks);
 
+    const parentId = record.parentId ? Number(record.parentId) : null;
+    const { parentId: _, ...cleanRecord } = record;
+
     const newRecord: GanttTask = {
-      ...record,
+      ...cleanRecord,
       id: maxId + 1,
       start: new Date(record.start),
       end: new Date(record.end),
+      percentComplete: Number(record.percentComplete) || 0,
     };
     
-    // Add to the top-level tasks
+    if (parentId) {
+      const parentTask = findTaskInTree(mockTasks, parentId);
+      if (parentTask) {
+        if (!parentTask.children) parentTask.children = [];
+        parentTask.children.push(newRecord);
+        return { ...newRecord };
+      }
+    }
+
+    // Add to top-level tasks if no parentId specified or parent not found
     mockTasks = [...mockTasks, newRecord];
     return { ...newRecord };
   },

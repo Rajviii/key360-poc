@@ -95,7 +95,22 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
       alert("Permission Denied: You do not have permission to modify records.");
       return;
     }
-    setSelectedItem(item);
+    const itemWithParent = { ...item };
+    if (itemWithParent.parentId === undefined) {
+      const findParentId = (list: any[], targetId: any, currentParentId: any = ""): any => {
+        for (const node of list) {
+          if (node.id === targetId) return currentParentId;
+          if (node.children && node.children.length > 0) {
+            const res = findParentId(node.children, targetId, node.id);
+            if (res !== undefined) return res;
+          }
+        }
+        return undefined;
+      };
+      const foundParentId = findParentId(data, item.id);
+      itemWithParent.parentId = foundParentId !== undefined ? foundParentId : "";
+    }
+    setSelectedItem(itemWithParent);
     setDialogMode("edit");
   };
 
@@ -130,6 +145,9 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
       // Parse numeric types
       if (payload.hours) payload.hours = Number(payload.hours);
       if (payload.percentComplete) payload.percentComplete = Number(payload.percentComplete);
+      if (payload.parentId !== undefined && payload.parentId !== "") {
+        payload.parentId = Number(payload.parentId);
+      }
 
       if (dialogMode === "add") {
         await service.create(payload);

@@ -8,7 +8,7 @@ export const projectPlanningModuleConfig = resolveModuleConfig({
   breadcrumbs: ["Project Management", "Project Planning (Gantt)"],
   endpoint: "project-planning",
   columnRefs: ["id", "title", "start", "end", "percentComplete"],
-  fieldRefs: ["title", "start", "end", "percentComplete"],
+  fieldRefs: ["title", "parentId", "start", "end", "percentComplete"],
   kpis: [
     { label: "Total Tasks", type: "count-tree", icon: clipboardTextIcon },
     { label: "Average Progress", type: "average-tree", field: "percentComplete", format: "percent", icon: chartLineMarkersIcon, color: "text-blue-600" },
@@ -21,6 +21,7 @@ export const initialProjectTasks = [
   {
     id: 1,
     title: "Planning",
+    parentId: "",
     start: new Date("2026-07-01T08:00:00.000Z"),
     end: new Date("2026-07-10T17:00:00.000Z"),
     percentComplete: 0.85,
@@ -29,6 +30,7 @@ export const initialProjectTasks = [
       {
         id: 2,
         title: "Requirements",
+        parentId: 1,
         start: new Date("2026-07-01T08:00:00.000Z"),
         end: new Date("2026-07-05T17:00:00.000Z"),
         percentComplete: 1.0,
@@ -36,6 +38,7 @@ export const initialProjectTasks = [
       {
         id: 3,
         title: "Design Approval",
+        parentId: 1,
         start: new Date("2026-07-06T08:00:00.000Z"),
         end: new Date("2026-07-10T17:00:00.000Z"),
         percentComplete: 0.7,
@@ -45,6 +48,7 @@ export const initialProjectTasks = [
   {
     id: 4,
     title: "Procurement",
+    parentId: "",
     start: new Date("2026-07-11T08:00:00.000Z"),
     end: new Date("2026-07-20T17:00:00.000Z"),
     percentComplete: 0.4,
@@ -53,6 +57,7 @@ export const initialProjectTasks = [
       {
         id: 5,
         title: "Vendor Selection",
+        parentId: 4,
         start: new Date("2026-07-11T08:00:00.000Z"),
         end: new Date("2026-07-15T17:00:00.000Z"),
         percentComplete: 0.9,
@@ -60,6 +65,7 @@ export const initialProjectTasks = [
       {
         id: 6,
         title: "Purchase Orders",
+        parentId: 4,
         start: new Date("2026-07-16T08:00:00.000Z"),
         end: new Date("2026-07-20T17:00:00.000Z"),
         percentComplete: 0.1,
@@ -69,6 +75,7 @@ export const initialProjectTasks = [
   {
     id: 7,
     title: "Construction",
+    parentId: "",
     start: new Date("2026-07-21T08:00:00.000Z"),
     end: new Date("2026-08-20T17:00:00.000Z"),
     percentComplete: 0.15,
@@ -77,6 +84,7 @@ export const initialProjectTasks = [
       {
         id: 8,
         title: "Foundation",
+        parentId: 7,
         start: new Date("2026-07-21T08:00:00.000Z"),
         end: new Date("2026-07-28T17:00:00.000Z"),
         percentComplete: 0.6,
@@ -84,6 +92,7 @@ export const initialProjectTasks = [
       {
         id: 9,
         title: "Structural Work",
+        parentId: 7,
         start: new Date("2026-07-29T08:00:00.000Z"),
         end: new Date("2026-08-10T17:00:00.000Z"),
         percentComplete: 0.05,
@@ -91,6 +100,7 @@ export const initialProjectTasks = [
       {
         id: 10,
         title: "Electrical Installation",
+        parentId: 7,
         start: new Date("2026-08-11T08:00:00.000Z"),
         end: new Date("2026-08-20T17:00:00.000Z"),
         percentComplete: 0.0,
@@ -100,6 +110,7 @@ export const initialProjectTasks = [
   {
     id: 11,
     title: "Commissioning",
+    parentId: "",
     start: new Date("2026-08-21T08:00:00.000Z"),
     end: new Date("2026-08-25T17:00:00.000Z"),
     percentComplete: 0.0,
@@ -107,6 +118,7 @@ export const initialProjectTasks = [
   {
     id: 12,
     title: "Handover",
+    parentId: "",
     start: new Date("2026-08-26T08:00:00.000Z"),
     end: new Date("2026-08-28T17:00:00.000Z"),
     percentComplete: 0.0,

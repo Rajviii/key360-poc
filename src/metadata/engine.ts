@@ -36,12 +36,6 @@ export interface ModuleConfig {
 // Resolution Helper
 export function resolveModuleConfig(minimalConfig: any): ModuleConfig {
   const moduleId = minimalConfig.id;
-  
-  // 1. Check metadata cache
-  const cached = MetadataCache.get(moduleId);
-  if (cached) {
-    return cached;
-  }
 
   // 2. Load inherited template config (Composition / Inheritance)
   let baseConfig: any = {};

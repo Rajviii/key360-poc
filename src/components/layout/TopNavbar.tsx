@@ -64,8 +64,8 @@ export default function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
                 <div className="h-6 w-px bg-green-600 hidden sm:block"></div>
 
                 {/* User Info */}
-                <div className="flex items-center gap-2 cursor-pointer hover:bg-green-800 p-1.5 rounded transition-colors">
-                    <div className="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-xs shadow-inner">
+                <div className="flex items-center gap-2 cursor-pointer hover:bg-gray-400 p-1.5 rounded transition-colors">
+                    <div className="w-7 h-7 rounded-full bg-green-700 text-white flex items-center justify-center font-bold text-xs shadow-inner">
                         R
                     </div>
                     <span className="hidden sm:inline text-white font-semibold">Rajvi Test</span>
