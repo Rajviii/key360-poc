@@ -11,6 +11,7 @@ import DynamicForm from "@/components/form/DynamicForm";
 import TimesheetForm from "@/components/form/TimesheetForm"; // Kept for safety/parity reference
 import { ModuleConfig } from "@/metadata/engine";
 import { PDFViewer } from "@progress/kendo-react-pdf-viewer";
+import { SvgIcon } from "@progress/kendo-react-common";
 
 interface ModuleRendererProps {
   config: ModuleConfig;
@@ -285,8 +286,12 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
                       {stat.subtext}
                     </p>
                   </div>
-                  <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-xl shadow-sm border border-slate-100">
-                    {stat.icon}
+                  <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-xl shadow-sm border border-slate-100 text-slate-700">
+                    {typeof stat.icon === "string" ? (
+                      stat.icon
+                    ) : (
+                      <SvgIcon icon={stat.icon} size="medium" />
+                    )}
                   </div>
                 </div>
               ))}
