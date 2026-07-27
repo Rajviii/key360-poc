@@ -16,6 +16,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Key360 Management Portal",
   description: "Key360 enterprise management platform modernized with React, Next.js, and KendoReact.",
+  icons: {
+    icon: "/api/logo",
+    shortcut: "/api/logo",
+    apple: "/api/logo",
+  },
 };
 
 export default function RootLayout({

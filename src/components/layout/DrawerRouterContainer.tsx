@@ -14,7 +14,7 @@ import {
 import { Button } from "@progress/kendo-react-buttons";
 import * as svgIcons from "@progress/kendo-svg-icons";
 
-const kendokaAvatar = "https://demos.telerik.com/kendo-react-ui/assets/suite/kendoka-react.png";
+const kendokaAvatar = "/api/logo";
 
 export default function DrawerRouterContainer(props: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -111,9 +111,12 @@ export default function DrawerRouterContainer(props: { children: React.ReactNode
         </AppBarSection>
 
         <AppBarSection className="flex items-center gap-3">
-          <h1 className="title font-extrabold text-base tracking-widest text-white select-none cursor-pointer" onClick={() => router.push("/")}>
-            KEY360
-          </h1>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push("/")}>
+            <img src="/api/logo" alt="KEY360 Logo" className="w-6 h-6 object-contain" />
+            <h1 className="title font-extrabold text-base tracking-widest text-white select-none">
+              KEY360
+            </h1>
+          </div>
           <span className="text-green-500 hidden xs:inline">|</span>
           <span className="text-xs text-green-200 hidden xs:inline font-medium">
             Training &bull; Demo Work &bull; <span className="font-bold text-white">DIW001</span>
@@ -131,8 +134,8 @@ export default function DrawerRouterContainer(props: { children: React.ReactNode
             </span>
           </div>
 
-          <Avatar type="image" className="w-8 h-8 rounded-full border border-green-600 cursor-pointer">
-            <img src={kendokaAvatar} alt="KendoReact Layout Kendoka Avatar" />
+          <Avatar type="image" className="w-8 h-8 rounded-full border border-green-600 cursor-pointer overflow-hidden p-0.5 bg-white/10">
+            <img src={kendokaAvatar} alt="Key360 Logo Avatar" className="w-full h-full object-contain" />
           </Avatar>
         </AppBarSection>
       </AppBar>

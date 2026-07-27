@@ -232,6 +232,15 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
 
     return (
         <aside className={`bg-[#052e25] border-r border-[#042820] text-slate-300 flex flex-col h-full flex-shrink-0 font-sans select-none transition-all duration-300 ease-in-out ${expanded ? "w-64" : "w-0 overflow-hidden"}`}>
+            {/* Sidebar Logo Header */}
+            <div className="p-4 border-b border-[#042820] bg-[#03231c]/80 flex items-center gap-3">
+                <img src="/api/logo" alt="KEY360 Platform Logo" className="w-7 h-7 object-contain" />
+                <div>
+                    <div className="font-extrabold text-sm text-white tracking-wide">KEY360</div>
+                    <div className="text-[10px] text-[#7ea198] font-medium uppercase tracking-wider">Enterprise Suite</div>
+                </div>
+            </div>
+
             {/* Scrollable Navigation Area */}
             <div className="flex-1 overflow-y-auto py-4 px-3 min-w-[16rem]">
                 <div className="panelbar-wrapper w-full">
@@ -326,9 +335,7 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
             <div className="p-4 border-t border-[#042820] bg-[#03231c]/60 flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
-                            R
-                        </div>
+                        <img src="/api/logo" alt="Profile Logo" className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/30 p-1 object-contain" />
                         <div>
                             <div className="font-semibold text-xs text-white">Rajvi Test</div>
                             <div className="text-[10px] text-[#7ea198] font-medium">Administrator</div>

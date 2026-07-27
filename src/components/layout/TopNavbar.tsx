@@ -35,8 +35,9 @@ export default function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
 
                 {/* Brand & Context */}
                 <div className="flex items-center gap-3">
-                    <Link href="/" className="font-extrabold text-lg tracking-wider hover:opacity-90 transition-opacity">
-                        KEY<span className="text-green-300">360</span>
+                    <Link href="/" className="font-extrabold text-lg tracking-wider hover:opacity-90 transition-opacity flex items-center gap-2.5">
+                        <img src="/api/logo" alt="KEY360 Logo" className="w-7 h-7 object-contain" />
+                        <span>KEY<span className="text-green-300">360</span></span>
                     </Link>
                     <span className="text-green-500 font-light">|</span>
                     <div className="text-xs md:text-sm text-green-100 hidden sm:block">
@@ -64,10 +65,8 @@ export default function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
                 <div className="h-6 w-px bg-green-600 hidden sm:block"></div>
 
                 {/* User Info */}
-                <div className="flex items-center gap-2 cursor-pointer hover:bg-gray-400 p-1.5 rounded transition-colors">
-                    <div className="w-7 h-7 rounded-full bg-green-700 text-white flex items-center justify-center font-bold text-xs shadow-inner">
-                        R
-                    </div>
+                <div className="flex items-center gap-2 cursor-pointer hover:bg-green-800 p-1.5 rounded transition-colors">
+                    <img src="/api/logo" alt="User Profile Logo" className="w-7 h-7 rounded-full bg-white/20 p-0.5 object-contain" />
                     <span className="hidden sm:inline text-white font-semibold">Rajvi Test</span>
                 </div>
             </div>
