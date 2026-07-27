@@ -9,7 +9,12 @@ import {
   GridContextMenuEvent,
   GridHandle,
   GridSelectionChangeEvent,
+  GridToolbar,
+  GridToolbarAIAssistant,
+  GridToolbarSpacer,
+  handleAIResponse,
 } from "@progress/kendo-react-grid";
+import type { GridToolbarAIAssistantHandle } from "@progress/kendo-react-grid";
 import { process, State } from "@progress/kendo-data-query";
 import { GridColumn } from "@/types/metadata";
 import { Button } from "@progress/kendo-react-buttons";
@@ -40,6 +45,11 @@ import {
   chartLineIcon,
   chartLineStacked100Icon,
   chartScatterIcon,
+  arrowRotateCcwIcon,
+  pencilIcon,
+  trashIcon,
+  saveIcon,
+  cancelIcon,
 } from "@progress/kendo-svg-icons";
 
 interface GenericGridProps {
@@ -50,6 +60,7 @@ interface GenericGridProps {
   onDelete: (item: any) => void;
   onRowClick?: (item: any) => void;
   dataItemKey?: string;
+  onSave?: (id: any, item: any) => Promise<void>;
 }
 
 export default function GenericGrid({
@@ -60,10 +71,15 @@ export default function GenericGrid({
   onDelete,
   onRowClick,
   dataItemKey = "id",
+  onSave,
 }: GenericGridProps) {
   // Premium Chart Integration states & refs
   const gridRef = useRef<GridHandle>(null);
   const offset = useRef({ left: 0, top: 0 });
+  const [mounted, setMounted] = useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [select, setSelect] = useState<Record<string | number, boolean | number[]>>({});
   const [showChartWizard, setShowChartWizard] = useState(false);
@@ -200,6 +216,24 @@ export default function GenericGrid({
     handleClearSelection,
     openChartWizard,
   ]);
+
+  // Helper to map date strings to Date objects for Kendo inputs
+  const mapDataDates = useCallback((items: any[]) => {
+    if (!items) return [];
+    return items.map((item) => {
+      const newItem = { ...item };
+      columns.forEach((col) => {
+        if (col.type === "date" && newItem[col.field]) {
+          const parsedDate = new Date(newItem[col.field]);
+          if (!isNaN(parsedDate.getTime())) {
+            newItem[col.field] = parsedDate;
+          }
+        }
+      });
+      return newItem;
+    });
+  }, [columns]);
+
   // Grid Data State: sorting, filtering, paging, grouping
   const [gridState, setGridState] = useState<State>({
     skip: 0,
@@ -208,6 +242,14 @@ export default function GenericGrid({
     filter: { logic: "and", filters: [] },
     group: [],
   });
+
+  // Local state for the grid's data (needed for inline editing)
+  const [gridData, setGridData] = useState<any[]>(() => mapDataDates(data));
+
+  // Keep gridData in sync if parent data prop changes
+  React.useEffect(() => {
+    setGridData(mapDataDates(data));
+  }, [data, mapDataDates]);
 
   // Manage columns list as state to allow dynamic reordering & resizing
   const [gridColumns, setGridColumns] = useState<GridColumn[]>(() => columns);
@@ -240,6 +282,65 @@ export default function GenericGrid({
 
   const [showColumnChooser, setShowColumnChooser] = useState(false);
 
+  // AI Toolbar Assistant Ref & Helpers
+  const gridToolbarAIAssistantRef = useRef<GridToolbarAIAssistantHandle>(null);
+
+  const getColumnValues = useCallback((field: string) => {
+    if (!data) return [];
+    const values = data
+      .map((item) => item[field])
+      .filter((val) => val !== undefined && val !== null && val !== "");
+    return Array.from(new Set(values));
+  }, [data]);
+
+  const addColumnsValues = useCallback((columnsList: any[]) => {
+    return columnsList.map((column) => {
+      return {
+        ...column,
+        values: getColumnValues(column.field),
+      };
+    });
+  }, [getColumnValues]);
+
+  // Dynamic Suggestions for AI Assistant
+  const suggestions = useMemo(() => {
+    const list: string[] = [];
+    if (gridColumns && gridColumns.length > 0) {
+      const filterableCols = gridColumns.filter(
+        (c) => c.field !== "actions" && c.field !== "id"
+      );
+      if (filterableCols.length > 0) {
+        const firstCol = filterableCols[0];
+        list.push(`Sort by ${firstCol.title} descending`);
+      }
+      const groupableCols = gridColumns.filter(
+        (c) => c.field !== "actions" && c.field !== "id" && c.type !== "date"
+      );
+      if (groupableCols.length > 0) {
+        list.push(`Group by ${groupableCols[0].title.toLowerCase()}`);
+      }
+      const badgeCol = gridColumns.find((c) => c.type === "badge");
+      if (badgeCol && data && data.length > 0) {
+        const values = getColumnValues(badgeCol.field);
+        if (values.length > 0) {
+          list.push(`Filter only the ${String(values[0]).toLowerCase()} entries`);
+        }
+      }
+    }
+    list.push("Clear sorting and filtering");
+    return list;
+  }, [gridColumns, data, getColumnValues]);
+
+  const handleReset = useCallback(() => {
+    setGridState({
+      skip: 0,
+      take: 10,
+      sort: [],
+      filter: { logic: "and", filters: [] },
+      group: [],
+    });
+  }, []);
+
   const handleOpenReorder = (column: any) => {
     setSelectedColumnForReorder(column);
     setIsReorderOpen(true);
@@ -270,7 +371,7 @@ export default function GenericGrid({
 
   // Apply global search filter and Kendo Grid filters
   const processedData = useMemo(() => {
-    let filtered = [...data];
+    let filtered = [...gridData];
 
     // 1. Apply global search across text fields if query exists
     if (searchQuery.trim() !== "") {
@@ -286,12 +387,79 @@ export default function GenericGrid({
 
     // 2. Apply grid specific filtering, sorting, paging
     return process(filtered, gridState);
-  }, [data, searchQuery, gridState]);
+  }, [gridData, searchQuery, gridState]);
 
   // Handle data state changes (sort, page, filter)
   const handleDataStateChange = (e: GridDataStateChangeEvent) => {
     setGridState(e.dataState);
   };
+
+  // Inline Editing Event Handlers
+  const handleItemChange = useCallback((e: any) => {
+    const updatedData = gridData.map((item) =>
+      item[dataItemKey] === e.dataItem[dataItemKey]
+        ? { ...item, [e.field]: e.value }
+        : item
+    );
+    setGridData(updatedData);
+  }, [gridData, dataItemKey]);
+
+  const handleInlineEdit = useCallback((itemToEdit: any) => {
+    const updatedData = gridData.map((item) =>
+      item[dataItemKey] === itemToEdit[dataItemKey]
+        ? { ...item, inEdit: true }
+        : { ...item, inEdit: false }
+    );
+    setGridData(updatedData);
+  }, [gridData, dataItemKey]);
+
+  const handleInlineCancel = useCallback((itemToCancel: any) => {
+    const originalItem = data.find((item) => item[dataItemKey] === itemToCancel[dataItemKey]);
+    if (!originalItem) return;
+    const mappedOriginal = mapDataDates([originalItem])[0];
+    const updatedData = gridData.map((item) =>
+      item[dataItemKey] === itemToCancel[dataItemKey]
+        ? { ...mappedOriginal, inEdit: false }
+        : item
+    );
+    setGridData(updatedData);
+  }, [data, gridData, dataItemKey, mapDataDates]);
+
+  const handleInlineSave = useCallback(async (itemToSave: any) => {
+    if (onSave) {
+      const { inEdit, ...payload } = itemToSave;
+
+      // Convert Date objects back to YYYY-MM-DD format string before saving
+      columns.forEach((col) => {
+        if (col.type === "date" && payload[col.field] instanceof Date) {
+          const dateObj = payload[col.field] as Date;
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          payload[col.field] = `${year}-${month}-${day}`;
+        }
+      });
+
+      await onSave(itemToSave[dataItemKey], payload);
+    }
+    const updatedData = gridData.map((item) =>
+      item[dataItemKey] === itemToSave[dataItemKey]
+        ? { ...item, inEdit: false }
+        : item
+    );
+    setGridData(updatedData);
+  }, [gridData, dataItemKey, onSave, columns]);
+
+  // Derive the edit state descriptor from gridData for KendoReact Grid v15+
+  const editState = useMemo(() => {
+    const state: Record<string | number, boolean> = {};
+    gridData.forEach((item) => {
+      if (item.inEdit) {
+        state[item[dataItemKey]] = true;
+      }
+    });
+    return state;
+  }, [gridData, dataItemKey]);
 
   // Toggle column visibility
   const toggleColumn = (field: string) => {
@@ -303,6 +471,14 @@ export default function GenericGrid({
 
   // Status Badge Renderer
   const StatusCell = (props: any) => {
+    if (props.rowType === "edit" || props.dataItem.inEdit) {
+      return (
+        <td {...props.tdProps} className={`px-6 py-4 whitespace-nowrap text-sm ${props.tdProps?.className || ""}`}>
+          {props.children}
+        </td>
+      );
+    }
+
     const status = props.dataItem[props.field] || "";
     let badgeClass = "bg-slate-100 text-slate-700 border-slate-300";
 
@@ -325,6 +501,14 @@ export default function GenericGrid({
 
   // Date Cell Renderer
   const DateCell = (props: any) => {
+    if (props.rowType === "edit" || props.dataItem.inEdit) {
+      return (
+        <td {...props.tdProps} className={`px-6 py-4 whitespace-nowrap text-sm ${props.tdProps?.className || ""}`}>
+          {props.children}
+        </td>
+      );
+    }
+
     const rawVal = props.dataItem[props.field];
     if (!rawVal) return <td {...props.tdProps}></td>;
     const formatted = new Date(rawVal).toLocaleDateString(undefined, {
@@ -341,6 +525,14 @@ export default function GenericGrid({
 
   // Numbers Cell Renderer
   const NumberCell = (props: any) => {
+    if (props.rowType === "edit" || props.dataItem.inEdit) {
+      return (
+        <td {...props.tdProps} className={`px-6 py-4 whitespace-nowrap text-sm text-right ${props.tdProps?.className || ""}`}>
+          {props.children}
+        </td>
+      );
+    }
+
     const val = props.dataItem[props.field];
     return (
       <td {...props.tdProps} className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-slate-800 ${props.tdProps?.className || ""}`}>
@@ -352,74 +544,77 @@ export default function GenericGrid({
   // Action Buttons Renderer
   const ActionsCell = (props: any) => {
     const item = props.dataItem;
+    const isInEdit = item.inEdit;
+
+    if (isInEdit) {
+      return (
+        <td className="px-6 py-3 text-right text-sm font-medium space-x-2 actions-cell">
+          <Button
+            svgIcon={saveIcon}
+            title="Update changes"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleInlineSave(item);
+            }}
+            className="p-1.5 hover:bg-emerald-50 rounded text-emerald-600 hover:text-emerald-800 border-none bg-transparent cursor-pointer"
+          />
+          <Button
+            svgIcon={cancelIcon}
+            title="Cancel changes"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleInlineCancel(item);
+            }}
+            className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800 border-none bg-transparent cursor-pointer"
+          />
+        </td>
+      );
+    }
+
     return (
       <td className="px-6 py-3 text-right text-sm font-medium space-x-2 actions-cell">
-        <button
+        <Button
+          svgIcon={pencilIcon}
+          title="Edit Record (Popup)"
           onClick={(e) => {
             e.stopPropagation();
             onEdit(item);
           }}
-          className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 px-2 py-1 rounded transition-colors cursor-pointer"
-        >
-          Edit
-        </button>
-        <button
+          className="p-1.5 hover:bg-green-50 rounded text-green-600 hover:text-green-800 border-none bg-transparent cursor-pointer"
+        />
+        <Button
+          svgIcon={pencilIcon}
+          title="Quick Edit (Inline)"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleInlineEdit(item);
+          }}
+          className="p-1.5 hover:bg-indigo-50 rounded text-indigo-600 hover:text-indigo-800 border-none bg-transparent cursor-pointer"
+        />
+        <Button
+          svgIcon={trashIcon}
+          title="Delete Record"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(item);
           }}
-          className="text-rose-600 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded transition-colors cursor-pointer"
-        >
-          Delete
-        </button>
+          className="p-1.5 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 border-none bg-transparent cursor-pointer"
+        />
       </td>
     );
   };
 
   return (
     <div className="relative bg-white rounded-xl border border-slate-200 shadow-sm overflow-visible">
-      {/* Column Chooser Bar */}
-      <div className="flex justify-end p-3 border-b border-slate-100 bg-slate-50/50">
-        <div className="relative">
-          <Button
-            onClick={() => setShowColumnChooser(!showColumnChooser)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
-          >
-            Columns
-          </Button>
-
-          {showColumnChooser && (
-            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-2 text-sm text-slate-700">
-              <div className="px-3 py-1 font-semibold text-xs text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
-                Toggle Columns
-              </div>
-              <div className="max-h-60 overflow-y-auto px-1">
-                {columns.map((col) => (
-                  <label
-                    key={col.field}
-                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 rounded cursor-pointer select-none"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!!visibleFields[col.field]}
-                      onChange={() => toggleColumn(col.field)}
-                      className="rounded border-slate-300 text-green-600 focus:ring-green-500"
-                    />
-                    <span>{col.title}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Kendo Grid Component */}
       <Grid
         ref={gridRef}
         style={{ height: "500px" }}
         data={processedData}
         dataItemKey={dataItemKey}
+        edit={editState}
+        editable={true}
+        onItemChange={handleItemChange}
         selectable={{
           enabled: true,
           drag: true,
@@ -455,16 +650,86 @@ export default function GenericGrid({
           }
         }}
       >
+        <GridToolbar>
+          {mounted && (
+            <GridToolbarAIAssistant
+              ref={gridToolbarAIAssistantRef}
+              requestUrl="/api/ai/grid"
+              onPromptRequest={(event) => {
+                event.columns = addColumnsValues(event.columns);
+              }}
+              onResponseSuccess={(event) => {
+                const result = handleAIResponse(event, gridState, gridRef.current);
+                if (result.state) {
+                  setGridState(result.state);
+                }
+                gridToolbarAIAssistantRef.current?.hide();
+              }}
+              promptPlaceHolder="Filter, sort or group with AI"
+              suggestionsList={suggestions}
+              enableSpeechToText={true}
+            />
+          )}
+          <GridToolbarSpacer />
+
+          <div className="relative flex gap-2">
+            <div className="relative">
+              <Button
+                onClick={() => setShowColumnChooser(!showColumnChooser)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+              >
+                Columns
+              </Button>
+
+              {showColumnChooser && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-[100] py-2 text-sm text-slate-700">
+                  <div className="px-3 py-1 font-semibold text-xs text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
+                    Toggle Columns
+                  </div>
+                  <div className="max-h-60 overflow-y-auto px-1">
+                    {columns.map((col) => (
+                      <label
+                        key={col.field}
+                        className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 rounded cursor-pointer select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!visibleFields[col.field]}
+                          onChange={() => toggleColumn(col.field)}
+                          className="rounded border-slate-300 text-green-600 focus:ring-green-500"
+                        />
+                        <span>{col.title}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button
+              svgIcon={arrowRotateCcwIcon}
+              title="Reset changes"
+              onClick={handleReset}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+            >
+              Reset changes
+            </Button>
+          </div>
+        </GridToolbar>
         {gridColumns
           .filter((col) => visibleFields[col.field])
           .map((col) => {
             let cellRenderer = undefined;
+            let editorType: "text" | "numeric" | "date" | "boolean" = "text";
+
             if (col.type === "badge") {
               cellRenderer = StatusCell;
             } else if (col.type === "date") {
               cellRenderer = DateCell;
+              editorType = "date";
             } else if (col.type === "number") {
               cellRenderer = NumberCell;
+              editorType = "numeric";
             }
 
             return (
@@ -474,6 +739,7 @@ export default function GenericGrid({
                 title={col.title}
                 width={col.width}
                 filter={col.filter}
+                editor={editorType}
                 sortable={col.sortable !== false}
                 resizable={col.resizable !== false}
                 reorderable={col.reorderable !== false}
@@ -507,14 +773,14 @@ export default function GenericGrid({
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h2 className="text-base font-bold text-slate-800">Reorder Columns</h2>
-              <button 
+              <button
                 onClick={() => setIsReorderOpen(false)}
                 className="text-slate-400 hover:text-slate-600 font-bold p-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
-            
+
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               <p className="text-xs text-slate-500 mb-3">Adjust the column order using Up/Down buttons, or toggle their visibility using the checkboxes.</p>
               {gridColumns.map((col, index) => (
@@ -563,14 +829,14 @@ export default function GenericGrid({
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-sm overflow-hidden flex flex-col">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h2 className="text-base font-bold text-slate-800">Resize Column</h2>
-              <button 
+              <button
                 onClick={() => setIsResizeOpen(false)}
                 className="text-slate-400 hover:text-slate-600 font-bold p-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
-            
+
             <div className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Column</label>

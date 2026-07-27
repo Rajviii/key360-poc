@@ -211,6 +211,20 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
                 onEdit={handleEditInitiate}
                 onDelete={handleDelete}
                 onRowClick={(item) => setSelectedItem(item.id === selectedItem?.id ? null : item)}
+                onSave={async (id, payload) => {
+                  setLoading(true);
+                  try {
+                    if (payload.hours) payload.hours = Number(payload.hours);
+                    if (payload.percentComplete) payload.percentComplete = Number(payload.percentComplete);
+                    
+                    await service.update(id, payload);
+                    await fetchData();
+                  } catch (err) {
+                    console.error("Failed to save inline edit:", err);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
               />
             )}
 
