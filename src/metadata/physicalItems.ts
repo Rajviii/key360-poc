@@ -1,3 +1,4 @@
+import { cubeIcon, listUnorderedSquareIcon } from "@progress/kendo-svg-icons";
 import { resolveModuleConfig } from "./engine";
 
 export const physicalItemsModuleConfig = resolveModuleConfig({
@@ -49,7 +50,7 @@ export const physicalItemsModuleConfig = resolveModuleConfig({
     "documentPdf",
   ],
   kpis: [
-    { label: "Total Registered Items", type: "count", icon: "📦", color: "text-blue-600" },
-    { label: "Total Available Stock", type: "sum", field: "totalStock", suffix: " units", icon: "🔢", color: "text-emerald-600" },
+    { label: "Total Registered Items", type: "count", icon: listUnorderedSquareIcon, color: "text-blue-600" },
+    { label: "Total Available Stock", type: "sum", field: "totalStock", suffix: " units", icon: cubeIcon, color: "text-emerald-600" },
   ],
 });

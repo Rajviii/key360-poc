@@ -15,6 +15,7 @@ import {
   ChartValueAxisItem,
   ChartTooltip,
 } from "@progress/kendo-react-charts";
+import { SvgIcon } from "@progress/kendo-react-common";
 
 export default function Dashboard() {
   const [dataMap, setDataMap] = useState<Record<string, any>>({});
@@ -117,7 +118,7 @@ export default function Dashboard() {
           value,
           moduleTitle: mod.title,
           color: kpi.color || "text-slate-900",
-          icon: kpi.icon || "📊",
+          icon: kpi.icon || null,
         });
       });
     });
@@ -268,7 +269,13 @@ export default function Dashboard() {
                       <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                         {kpi.label}
                       </span>
-                      <span className="text-lg">{kpi.icon}</span>
+                      {kpi.icon && typeof kpi.icon === "object" ? (
+                        <span className={`${kpi.color || "text-slate-500"}`}>
+                          <SvgIcon icon={kpi.icon} size="medium" />
+                        </span>
+                      ) : kpi.icon ? (
+                        <span className="text-lg">{kpi.icon}</span>
+                      ) : null}
                     </div>
                     <h3 className={`text-3xl font-extrabold mt-2 ${kpi.color}`}>
                       {kpi.value}

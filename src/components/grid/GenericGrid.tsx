@@ -254,6 +254,7 @@ export default function GenericGrid({
     setGridData(mapDataDates(data));
   }, [data, mapDataDates]);
 
+
   // Manage columns list as state to allow dynamic reordering & resizing
   const [gridColumns, setGridColumns] = useState<GridColumn[]>(() => columns);
 
@@ -298,12 +299,14 @@ export default function GenericGrid({
 
   const addColumnsValues = useCallback((columnsList: any[]) => {
     return columnsList.map((column) => {
+      const colMeta = gridColumns.find((c) => c.field === column.field);
       return {
         ...column,
+        title: column.title || colMeta?.title || "",
         values: getColumnValues(column.field),
       };
     });
-  }, [getColumnValues]);
+  }, [getColumnValues, gridColumns]);
 
   // Dynamic Suggestions for AI Assistant
   const suggestions = useMemo(() => {

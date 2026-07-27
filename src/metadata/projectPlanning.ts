@@ -1,3 +1,4 @@
+import { checkCircleIcon, chartLineMarkersIcon, clipboardTextIcon, gearIcon } from "@progress/kendo-svg-icons";
 import { resolveModuleConfig } from "./engine";
 
 export const projectPlanningModuleConfig = resolveModuleConfig({
@@ -9,10 +10,10 @@ export const projectPlanningModuleConfig = resolveModuleConfig({
   columnRefs: ["id", "title", "start", "end", "percentComplete"],
   fieldRefs: ["title", "start", "end", "percentComplete"],
   kpis: [
-    { label: "Total Tasks", type: "count-tree", icon: "📋" },
-    { label: "Average Progress", type: "average-tree", field: "percentComplete", format: "percent", icon: "📈", color: "text-blue-600" },
-    { label: "Completed Tasks", type: "count-tree", filter: { percentComplete: { gte: 1.0 } }, icon: "✅", color: "text-emerald-600" },
-    { label: "In Progress Tasks", type: "count-tree", filter: { percentComplete: { gt: 0, lt: 1.0 } }, icon: "⚙️", color: "text-amber-600" },
+    { label: "Total Tasks", type: "count-tree", icon: clipboardTextIcon },
+    { label: "Average Progress", type: "average-tree", field: "percentComplete", format: "percent", icon: chartLineMarkersIcon, color: "text-blue-600" },
+    { label: "Completed Tasks", type: "count-tree", filter: { percentComplete: { gte: 1.0 } }, icon: checkCircleIcon, color: "text-emerald-600" },
+    { label: "In Progress Tasks", type: "count-tree", filter: { percentComplete: { gt: 0, lt: 1.0 } }, icon: gearIcon, color: "text-amber-600" },
   ]
 });
 

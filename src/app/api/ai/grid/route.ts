@@ -3,57 +3,131 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const prompt = body.contents?.[0]?.text || body.prompt || "";
+    const prompt = body.promptMessage || body.contents?.[0]?.text || body.prompt || "";
     const columns = body.columns || [];
 
     const commands: any[] = [];
     let message = "I have processed your request.";
-    const text = prompt.toLowerCase();
+    const text = prompt.toLowerCase().trim();
 
-    // Helper to find a column from text
+    // Helper to convert camelCase to space-separated string ("employeeName" -> "employee name")
+    const decamel = (str: string) =>
+      str.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
+
+    // Helper to strip non-alphanumeric characters
+    const clean = (str: string) => str.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
+
+    // Smart helper to find column by prompt text matching field, decamelized field, title or partial tokens
     const findColumn = (searchText: string) => {
-      return columns.find((c: any) => {
-        const fieldName = String(c.field).toLowerCase();
-        const titleName = String(c.title || "").toLowerCase();
-        return searchText.includes(fieldName) || searchText.includes(titleName);
-      });
+      const cleanSearch = clean(searchText);
+      const queryOnly = cleanSearch
+        .replace(/\b(group by|sort by|filter by|order by|group|sort|filter|order|by|asc|desc|descending|ascending|clear|reset)\b/g, "")
+        .trim();
+
+      // First pass: try exact candidate matches
+      for (const c of columns) {
+        const field = String(c.field || "");
+        const title = String(c.title || c.header || c.label || "");
+        const decamelField = decamel(field);
+
+        const candidates = [
+          field.toLowerCase(),
+          decamelField,
+          decamelField.replace(/\s+/g, ""),
+          title.toLowerCase(),
+          title.toLowerCase().replace(/\s+/g, "")
+        ].filter(Boolean);
+
+        for (const cand of candidates) {
+          if (
+            (queryOnly && (queryOnly === cand || queryOnly.includes(cand) || cand.includes(queryOnly))) ||
+            cleanSearch.includes(cand)
+          ) {
+            return c;
+          }
+        }
+      }
+
+      // Second pass: token overlap (e.g. "employee" matches "employeeName")
+      const queryTokens = queryOnly.split(/\s+/).filter((t) => t.length > 1);
+      if (queryTokens.length > 0) {
+        for (const c of columns) {
+          const field = String(c.field || "").toLowerCase();
+          const title = String(c.title || c.header || c.label || "").toLowerCase();
+          const combined = `${field} ${decamel(field)} ${title}`;
+          if (queryTokens.some((token) => combined.includes(token))) {
+            return c;
+          }
+        }
+      }
+
+      return undefined;
     };
 
-    if (text.includes("clear") || text.includes("reset") || text.includes("remove") || text.includes("original")) {
-      commands.push({
-        type: "clear"
-      });
-      message = "Cleared all sorting, grouping, and filtering.";
+    if (
+      text.includes("clear") ||
+      text.includes("reset") ||
+      text.includes("remove") ||
+      text.includes("original") ||
+      text.includes("show all") ||
+      text === "all"
+    ) {
+      commands.push(
+        { type: "GridClearFilter", message: "Cleared filters." },
+        { type: "GridClearSort", message: "Cleared sorting." },
+        { type: "GridClearGroup", message: "Cleared grouping." }
+      );
+      message = "Cleared all filters, sorting, and grouping.";
     } else if (text.includes("group")) {
       const col = findColumn(text);
       if (col) {
         commands.push({
-          type: "group",
-          field: col.field
+          type: "GridGroup",
+          group: [{ field: col.field }],
+          message: `Grouped by ${col.title || col.field}.`
         });
         message = `Grouped by ${col.title || col.field}.`;
       } else {
         message = "Could not find column to group by.";
       }
-    } else if (text.includes("sort") || text.includes("order") || text.includes("arrange") || text.includes("alphabetical")) {
-      const dir = text.includes("desc") || text.includes("down") || text.includes("reverse") || text.includes("z to a") ? "desc" : "asc";
-      const col = findColumn(text);
+    } else if (
+      text.includes("sort") ||
+      text.includes("order") ||
+      text.includes("arrange") ||
+      text.includes("alphabetical")
+    ) {
+      const dir =
+        text.includes("desc") ||
+        text.includes("down") ||
+        text.includes("reverse") ||
+        text.includes("z to a") ||
+        text.includes("highest") ||
+        text.includes("newest")
+          ? "desc"
+          : "asc";
+      let col = findColumn(text);
+      if (!col) {
+        if (text.includes("date") || text.includes("time")) col = columns.find((c: any) => c.field === "date");
+        else if (text.includes("name") || text.includes("employee")) col = columns.find((c: any) => c.field === "employeeName" || c.field === "name");
+        else if (text.includes("hours")) col = columns.find((c: any) => c.field === "hours");
+      }
       if (col) {
         commands.push({
-          type: "sort",
-          field: col.field,
-          dir: dir
+          type: "GridSort",
+          sort: [{ field: col.field, dir }],
+          message: `Sorted by ${col.title || col.field} in ${dir === "desc" ? "descending" : "ascending"} order.`
         });
         message = `Sorted by ${col.title || col.field} in ${dir === "desc" ? "descending" : "ascending"} order.`;
       } else {
         message = "Could not find column to sort by.";
       }
     } else {
-      // Try to find a filter match based on unique values in columns
+      // Filter matching
       let filterMatched = false;
+
+      // 1. First check unique values passed in column descriptors
       for (const col of columns) {
         if (col.values && Array.isArray(col.values)) {
-          // Check if prompt contains any of the column's unique values
           const matchedVal = col.values.find((val: any) => {
             if (val === null || val === undefined) return false;
             const strVal = String(val).toLowerCase();
@@ -62,10 +136,18 @@ export async function POST(request: Request) {
 
           if (matchedVal !== undefined) {
             commands.push({
-              type: "filter",
-              field: col.field,
-              operator: typeof matchedVal === "number" ? "eq" : "contains",
-              value: matchedVal
+              type: "GridFilter",
+              filter: {
+                logic: "and",
+                filters: [
+                  {
+                    field: col.field,
+                    operator: typeof matchedVal === "number" ? "eq" : "contains",
+                    value: matchedVal
+                  }
+                ]
+              },
+              message: `Filtered by ${col.title || col.field} matching "${matchedVal}".`
             });
             message = `Filtered by ${col.title || col.field} matching "${matchedVal}".`;
             filterMatched = true;
@@ -74,14 +156,75 @@ export async function POST(request: Request) {
         }
       }
 
-      // Fallback if no exact value match was found, but a column was mentioned with filter intent
-      if (!filterMatched && (text.includes("filter") || text.includes("only") || text.includes("show"))) {
-        const col = findColumn(text);
-        if (col) {
-          message = `Please specify which value you want to filter ${col.title || col.field} by.`;
-        } else {
-          message = "I couldn't understand which filter, sort or group operation to apply. Try using suggestions like 'Sort by employee name descending'.";
+      // 2. Keyword fallback filters if values weren't matched directly
+      if (!filterMatched) {
+        if (text.includes("pending")) {
+          const statusCol = columns.find((c: any) => c.field === "status");
+          if (statusCol) {
+            commands.push({
+              type: "GridFilter",
+              filter: {
+                logic: "and",
+                filters: [{ field: "status", operator: "contains", value: "Pending" }]
+              },
+              message: "Filtered by status containing Pending."
+            });
+            message = "Filtered by status containing Pending.";
+            filterMatched = true;
+          }
+        } else if (text.includes("approved")) {
+          const statusCol = columns.find((c: any) => c.field === "status");
+          if (statusCol) {
+            commands.push({
+              type: "GridFilter",
+              filter: {
+                logic: "and",
+                filters: [{ field: "status", operator: "eq", value: "Approved" }]
+              },
+              message: "Filtered by status Approved."
+            });
+            message = "Filtered by status Approved.";
+            filterMatched = true;
+          }
+        } else if (text.includes("draft")) {
+          const statusCol = columns.find((c: any) => c.field === "status");
+          if (statusCol) {
+            commands.push({
+              type: "GridFilter",
+              filter: {
+                logic: "and",
+                filters: [{ field: "status", operator: "eq", value: "Draft" }]
+              },
+              message: "Filtered by status Draft."
+            });
+            message = "Filtered by status Draft.";
+            filterMatched = true;
+          }
+        } else if (prompt.trim()) {
+          // General search term filter against all text columns
+          const textCols = columns.filter((c: any) => c.type === "text" || !c.type || c.field === "employeeName" || c.field === "name" || c.field === "taskDescription" || c.field === "commodity");
+          if (textCols.length > 0) {
+            const filterRules = textCols.map((c: any) => ({
+              field: c.field,
+              operator: "contains",
+              value: prompt.trim()
+            }));
+            commands.push({
+              type: "GridFilter",
+              filter: {
+                logic: "or",
+                filters: filterRules
+              },
+              message: `Filtered across columns for "${prompt}".`
+            });
+            message = `Filtered across columns for "${prompt}".`;
+            filterMatched = true;
+          }
         }
+      }
+
+      if (!filterMatched) {
+        message = "I couldn't understand which filter, sort or group operation to apply. Try using suggestions like 'Filter status Approved' or 'Sort by date desc'.";
       }
     }
 
@@ -90,6 +233,6 @@ export async function POST(request: Request) {
       message
     });
   } catch (error) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid AI request" }, { status: 400 });
   }
 }
