@@ -5,7 +5,9 @@ import {
     GridColumnMenuItemGroup,
     GridColumnMenuItem,
     GridColumnMenuGroup,
-    GridColumnMenuProps
+    GridColumnMenuProps,
+    GridColumnMenuFilter,
+    GridColumnMenuCheckboxFilter
 } from "@progress/kendo-react-grid";
 import { windowRestoreIcon, colResizeIcon } from "@progress/kendo-svg-icons";
 import { GridColumn } from "@/types/metadata";
@@ -15,6 +17,7 @@ interface CustomColumnMenuPropsExtended extends GridColumnMenuProps {
     setColumns: React.Dispatch<React.SetStateAction<GridColumn[]>>;
     onOpenReorderWindow: (column: any) => void;
     onOpenResizeWindow: (column: any) => void;
+    data: any[];
 }
 
 export const CustomColumnMenu: React.FC<CustomColumnMenuPropsExtended> = ({
@@ -22,6 +25,7 @@ export const CustomColumnMenu: React.FC<CustomColumnMenuPropsExtended> = ({
     setColumns,
     onOpenReorderWindow,
     onOpenResizeWindow,
+    data,
     ...props
 }) => {
     const [columnsExpanded, setColumnsExpanded] = React.useState<boolean>(false);
@@ -44,6 +48,9 @@ export const CustomColumnMenu: React.FC<CustomColumnMenuPropsExtended> = ({
         }
     };
 
+    const colMetadata = columns.find((c) => c.field === props.column.field);
+    const colType = colMetadata?.type;
+
     return (
         <div>
             <GridColumnMenuItemGroup>
@@ -61,6 +68,11 @@ export const CustomColumnMenu: React.FC<CustomColumnMenuPropsExtended> = ({
                 />
             </GridColumnMenuItemGroup>
             <GridColumnMenuGroup {...(props as any)} />
+            {colType === "number" || colType === "date" ? (
+                <GridColumnMenuFilter {...props} alwaysExpand={true} />
+            ) : (
+                <GridColumnMenuCheckboxFilter {...props} data={data} alwaysExpand={true} />
+            )}
         </div>
     );
 };
