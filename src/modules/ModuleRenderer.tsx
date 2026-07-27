@@ -28,12 +28,18 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
   // Modal dialog states
   const [dialogMode, setDialogMode] = useState<"none" | "add" | "edit">("none");
   const [activePdfItem, setActivePdfItem] = useState<any | null>(null);
+  const [loadMetrics, setLoadMetrics] = useState<{ loadTimeMs: number; cacheHit: boolean }>({ loadTimeMs: 0, cacheHit: false });
 
   // Load module data from generic service
   const fetchData = async () => {
     setLoading(true);
+    const start = performance.now();
     try {
       const response = await service.getAll();
+      const duration = Math.round(performance.now() - start);
+      const isHit = duration < 120;
+      setLoadMetrics({ loadTimeMs: duration, cacheHit: isHit });
+
       if (config.views.includes("gantt") && config.defaultView === "gantt") {
         setData(response.tasks || []);
         setDependencies(response.dependencies || []);
@@ -288,6 +294,50 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
         breadcrumbItems={config.breadcrumbs}
       >
         <div className="space-y-6">
+          {/* Metadata-Driven Framework Diagnostics Panel */}
+          {/* {config.performance?.diagnostics && (
+            <div className="bg-slate-900 text-slate-100 rounded-xl p-4 shadow-md border border-slate-800 font-mono text-xs">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <h4 className="font-bold uppercase tracking-wider text-slate-200 text-xs">Framework Diagnostics</h4>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded font-semibold">Metadata Engine Active</span>
+                </div>
+                <span className="text-slate-400 text-[11px]">POC Demonstration Metrics</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center">
+                <div className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/60">
+                  <span className="text-slate-400 text-[10px] uppercase block mb-1">Dataset Size</span>
+                  <span className="font-extrabold text-sm text-emerald-400">{data.length.toLocaleString()}+</span>
+                </div>
+                <div className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/60">
+                  <span className="text-slate-400 text-[10px] uppercase block mb-1">Records Rendered</span>
+                  <span className="font-extrabold text-sm text-blue-400">
+                    {config.performance?.virtualization ? "~20 Visible (DOM)" : `${data.length.toLocaleString()} Rows`}
+                  </span>
+                </div>
+                <div className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/60">
+                  <span className="text-slate-400 text-[10px] uppercase block mb-1">Page Size</span>
+                  <span className="font-extrabold text-sm text-purple-400">{config.performance?.pageSize || 10}</span>
+                </div>
+                <div className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/60">
+                  <span className="text-slate-400 text-[10px] uppercase block mb-1">Virtual Scrolling</span>
+                  <span className="font-extrabold text-sm text-emerald-400">{config.performance?.virtualization ? "Enabled" : "Disabled"}</span>
+                </div>
+                <div className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/60">
+                  <span className="text-slate-400 text-[10px] uppercase block mb-1">Cache Status</span>
+                  <span className={`font-extrabold text-xs ${loadMetrics.cacheHit ? "text-emerald-400" : "text-amber-400"}`}>
+                    {loadMetrics.cacheHit ? "Cache Hit" : "Cache Miss"}
+                  </span>
+                </div>
+                <div className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/60">
+                  <span className="text-slate-400 text-[10px] uppercase block mb-1">Response Time</span>
+                  <span className="font-extrabold text-sm text-indigo-400">{loadMetrics.loadTimeMs}ms</span>
+                </div>
+              </div>
+            </div>
+          )} */}
+
           {/* Dynamic Module-specific KPI Stats Row */}
           {stats && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -353,6 +403,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
               <GenericGrid
                 data={data}
                 columns={config.gridColumns}
+                performance={config.performance}
                 searchQuery={searchQuery}
                 onEdit={handleEditInitiate}
                 onDelete={handleDelete}
@@ -446,9 +497,9 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
               <div className="flex-1 bg-slate-100 overflow-auto p-4 flex justify-center items-center">
                 {activePdfItem.documentPdf ? (
                   <div className="w-full h-full bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
-                    <PDFViewer 
-                      data={activePdfItem.documentPdf} 
-                      style={{ width: "100%", height: "100%", minHeight: "550px" }} 
+                    <PDFViewer
+                      data={activePdfItem.documentPdf}
+                      style={{ width: "100%", height: "100%", minHeight: "550px" }}
                     />
                   </div>
                 ) : (

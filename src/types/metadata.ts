@@ -44,4 +44,10 @@ export interface ModuleConfig {
     taskModelFields: Record<string, string>;
     dependencyModelFields: Record<string, string>;
   };
+  performance?: {
+    virtualization?: boolean;
+    pageSize?: number;
+    diagnostics?: boolean;
+    cache?: boolean;
+  };
 }

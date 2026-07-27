@@ -30,6 +30,15 @@ export const ColumnPresets = {
   nextResponsiblePerson: { field: "nextResponsiblePerson", title: "Next Responsible Per:", width: 180, type: "text", filter: "text" },
   statusHistory: { field: "statusHistory", title: "Status History", width: 180, type: "text", filter: "text" },
   documentPdf: { field: "documentPdf", title: "Document", width: 140, type: "pdf", filter: "text" },
+  empId: { field: "empId", title: "Employee ID", width: 130, type: "text", filter: "text" },
+  department: { field: "department", title: "Department", width: 170, type: "text", filter: "text" },
+  designation: { field: "designation", title: "Designation", width: 190, type: "text", filter: "text" },
+  manager: { field: "manager", title: "Reporting Manager", width: 160, type: "text", filter: "text" },
+  email: { field: "email", title: "Email Address", width: 220, type: "text", filter: "text" },
+  phone: { field: "phone", title: "Phone Number", width: 140, type: "text", filter: "text" },
+  joinDate: { field: "joinDate", title: "Join Date", width: 130, type: "date", filter: "date" },
+  salaryGrade: { field: "salaryGrade", title: "Salary Grade", width: 120, type: "text", filter: "text" },
+  location: { field: "location", title: "Work Location", width: 160, type: "text", filter: "text" },
 };
 
 export const FormPresets = {
@@ -102,6 +111,45 @@ export const FormPresets = {
   nextResponsiblePerson: { field: "nextResponsiblePerson", label: "Next Responsible Person", type: "text", placeholder: "Enter responsible person name" },
   statusHistory: { field: "statusHistory", label: "Status History", type: "textarea", placeholder: "Audit log of status updates..." },
   documentPdf: { field: "documentPdf", label: "Upload Document (PDF)", type: "upload", placeholder: "Choose PDF document" },
+  empId: { field: "empId", label: "Employee ID", type: "text", required: true, placeholder: "e.g. EMP-100001" },
+  department: {
+    field: "department",
+    label: "Department",
+    type: "select",
+    required: true,
+    options: [
+      { label: "Engineering", value: "Engineering" },
+      { label: "Product Management", value: "Product Management" },
+      { label: "Human Resources", value: "Human Resources" },
+      { label: "Finance & Accounting", value: "Finance & Accounting" },
+      { label: "Sales & Marketing", value: "Sales & Marketing" },
+      { label: "Operations & Logistics", value: "Operations & Logistics" },
+      { label: "Legal & Compliance", value: "Legal & Compliance" },
+      { label: "Customer Success", value: "Customer Success" },
+    ],
+    defaultValue: "Engineering",
+  },
+  designation: { field: "designation", label: "Designation", type: "text", required: true, placeholder: "e.g. Senior Software Engineer" },
+  manager: { field: "manager", label: "Reporting Manager", type: "text", required: true, placeholder: "e.g. Yash Viradia" },
+  email: { field: "email", label: "Email Address", type: "text", required: true, placeholder: "e.g. john.doe@key360.com" },
+  phone: { field: "phone", label: "Phone Number", type: "text", required: false, placeholder: "e.g. +1-555-0192" },
+  joinDate: { field: "joinDate", label: "Join Date", type: "date", required: true },
+  salaryGrade: {
+    field: "salaryGrade",
+    label: "Salary Grade",
+    type: "select",
+    options: [
+      { label: "E-1 (Junior Specialist)", value: "E-1" },
+      { label: "E-2 (Specialist)", value: "E-2" },
+      { label: "E-3 (Senior Specialist)", value: "E-3" },
+      { label: "M-1 (Manager)", value: "M-1" },
+      { label: "M-2 (Senior Manager)", value: "M-2" },
+      { label: "D-1 (Director)", value: "D-1" },
+      { label: "VP-1 (Vice President)", value: "VP-1" },
+    ],
+    defaultValue: "E-3",
+  },
+  location: { field: "location", label: "Location", type: "text", required: true, placeholder: "e.g. New York, USA" },
 };
 
 export const ToolbarPresets = {

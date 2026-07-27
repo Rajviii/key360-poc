@@ -64,6 +64,12 @@ interface GenericGridProps {
   dataItemKey?: string;
   onSave?: (id: any, item: any) => Promise<void>;
   onViewPdf?: (item: any) => void;
+  performance?: {
+    virtualization?: boolean;
+    pageSize?: number;
+    diagnostics?: boolean;
+    cache?: boolean;
+  };
 }
 
 export default function GenericGrid({
@@ -76,6 +82,7 @@ export default function GenericGrid({
   dataItemKey = "id",
   onSave,
   onViewPdf,
+  performance,
 }: GenericGridProps) {
   // Premium Chart Integration states & refs
   const gridRef = useRef<GridHandle>(null);
@@ -242,7 +249,7 @@ export default function GenericGrid({
   // Grid Data State: sorting, filtering, paging, grouping
   const [gridState, setGridState] = useState<State>({
     skip: 0,
-    take: 10,
+    take: performance?.pageSize || 10,
     sort: [],
     filter: { logic: "and", filters: [] },
     group: [],
@@ -692,11 +699,13 @@ export default function GenericGrid({
         groupExpand={groupExpand}
         onGroupExpandChange={handleGroupExpandChange}
         groupable={true}
+        scrollable={performance?.virtualization ? "virtual" : "scrollable"}
+        rowHeight={performance?.virtualization ? 42 : undefined}
         pageable={{
           buttonCount: 5,
           info: true,
           type: "numeric",
-          pageSizes: [5, 10, 20, 50],
+          pageSizes: performance?.virtualization ? [20, 50, 100, 500, 1000] : [5, 10, 20, 50],
         }}
         sortable={true}
         filterable={true}

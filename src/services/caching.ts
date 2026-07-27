@@ -6,12 +6,12 @@ interface CacheEntry {
 }
 
 export class CachingDataProvider<T = any> implements IDataProvider<T> {
-  private provider: IDataProvider<T>;
+  private provider: IDataProvider<T> | any;
   private cacheKey: string;
   private ttl: number; // in milliseconds
   private static globalCache = new Map<string, CacheEntry>();
 
-  constructor(provider: IDataProvider<T>, cacheKey: string, ttlSeconds = 300) {
+  constructor(provider: IDataProvider<T> | any, cacheKey: string, ttlSeconds = 300) {
     this.provider = provider;
     this.cacheKey = cacheKey;
     this.ttl = ttlSeconds * 1000;
@@ -27,7 +27,7 @@ export class CachingDataProvider<T = any> implements IDataProvider<T> {
     CachingDataProvider.globalCache.clear();
   }
 
-  async getAll(): Promise<T> {
+  async getAll(): Promise<any> {
     const cached = CachingDataProvider.globalCache.get(this.cacheKey);
     const now = Date.now();
 

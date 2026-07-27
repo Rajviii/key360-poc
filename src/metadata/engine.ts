@@ -27,6 +27,12 @@ export interface ModuleConfig {
   ganttConfig?: any;
   kpis?: any[];
   charts?: any[];
+  performance?: {
+    virtualization?: boolean;
+    pageSize?: number;
+    diagnostics?: boolean;
+    cache?: boolean;
+  };
   // Compiled output fields
   gridColumns: any[];
   formFields: any[];

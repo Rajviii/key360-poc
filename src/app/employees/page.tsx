@@ -1,0 +1,20 @@
+"use client";
+
+import React from "react";
+import ModuleRenderer from "@/modules/ModuleRenderer";
+import { ModuleRegistry } from "@/metadata/registry";
+
+export default function EmployeesPage() {
+  const config = ModuleRegistry.getModule("employees");
+  const service = ModuleRegistry.getService("employees");
+
+  if (!config || !service) {
+    return (
+      <div className="p-8 text-center text-red-500 font-bold">
+        Error: Employees module not registered in Framework Registry.
+      </div>
+    );
+  }
+
+  return <ModuleRenderer config={config} service={service} />;
+}

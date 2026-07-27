@@ -113,21 +113,25 @@ export const ModuleRegistry = new ModuleRegistryClass();
 import { timesheetModuleConfig } from "./timesheet";
 import { projectPlanningModuleConfig } from "./projectPlanning";
 import { physicalItemsModuleConfig } from "./physicalItems";
+import { employeeModuleConfig } from "./employees";
 import { resolveModuleConfig } from "./engine";
 import { timesheetService } from "@/services/timesheetService";
 import { projectPlanningService } from "@/services/projectPlanningService";
 import { physicalItemsService } from "@/services/physicalItemsService";
+import { cachedEmployeeService } from "@/services/employeeService";
 
 // Register default business modules
 ModuleRegistry.registerModule(timesheetModuleConfig, "/timesheet");
 ModuleRegistry.registerModule(projectPlanningModuleConfig, "/project-planning");
 ModuleRegistry.registerModule(physicalItemsModuleConfig, "/physical-items");
+ModuleRegistry.registerModule(employeeModuleConfig, "/employees");
 
 // Register concrete services wrapped in the caching layer
 import { CachingDataProvider } from "@/services/caching";
 ModuleRegistry.registerService("timesheets", new CachingDataProvider(timesheetService, "timesheets_cache", 120));
 ModuleRegistry.registerService("project-planning", new CachingDataProvider(projectPlanningService, "project_planning_cache", 120));
 ModuleRegistry.registerService("physical-items", new CachingDataProvider(physicalItemsService, "physical_items_cache", 120));
+ModuleRegistry.registerService("employees", cachedEmployeeService);
 
 // Register demo placeholder modules to showcase high-efficiency metadata scaling
 ModuleRegistry.registerModule(resolveModuleConfig({

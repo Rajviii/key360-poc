@@ -157,8 +157,8 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
             icon: groupIcons["Favorites"],
             items: [
                 { title: "Timesheets", route: "/timesheet", isFavorite: true },
-                { title: "Projects", route: "#", disabled: true },
-                { title: "Assets", route: "#", disabled: true }
+                // { title: "Projects", route: "#", disabled: true },
+                // { title: "Assets", route: "#", disabled: true }
             ]
         },
         {
@@ -166,7 +166,7 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
             icon: groupIcons["Human Resources"],
             items: [
                 { title: "Timesheets", route: "/timesheet" },
-                { title: "Employees", route: "#", disabled: true },
+                { title: "Employees", route: "/employees" },
                 { title: "Leave Management", route: "#", disabled: true },
                 { title: "Approvals", route: "#", disabled: true }
             ]
