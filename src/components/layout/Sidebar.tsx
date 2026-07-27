@@ -1,103 +1,347 @@
 "use client";
 
-import React from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { PanelBar, PanelBarItem } from "@progress/kendo-react-layout";
-import { ModuleRegistry } from "@/metadata/registry";
 
 interface SidebarProps {
     expanded?: boolean;
+}
+
+// Group Headers SVG Icons
+const groupIcons: Record<string, React.ReactNode> = {
+    "Core": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+        </svg>
+    ),
+    "Favorites": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.969 0 1.371 1.24.588 1.81l-3.97 2.883a1 1 0 00-.364 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.971-2.883a1 1 0 00-1.176 0l-3.97 2.883c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.364-1.118l-3.97-2.883c-.783-.57-.38-1.81.588-1.81h4.906a1 1 0 00.951-.69l1.519-4.674z" />
+        </svg>
+    ),
+    "Human Resources": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+    ),
+    "Project Management": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+        </svg>
+    ),
+    "Operations": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+    ),
+    "Reports": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2" />
+        </svg>
+    ),
+    "Settings": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        </svg>
+    )
+};
+
+// Child Link Icons
+const childIcons: Record<string, React.ReactNode> = {
+    "Dashboard": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+    ),
+    "Timesheets": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+    ),
+    "Employees": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+    ),
+    "Leave Management": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00-2 2z" />
+        </svg>
+    ),
+    "Approvals": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+    ),
+    "Projects": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+    ),
+    "Project Planning (Gantt)": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2" />
+        </svg>
+    ),
+    "Tasks": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+    ),
+    "Assets": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+    ),
+    "Work Orders": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+    ),
+    "Vendors": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+    ),
+    "Physical Items Register": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+    ),
+    "Reports": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+    ),
+    "Analytics": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+        </svg>
+    )
+};
+
+interface SidebarItem {
+    title: string;
+    route: string;
+    disabled?: boolean;
+    isFavorite?: boolean;
+}
+
+interface SidebarCategory {
+    name: string;
+    icon: React.ReactNode;
+    items: SidebarItem[];
 }
 
 export default function Sidebar({ expanded = true }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
 
-    // Route select handler
+    // Explicit expanded state mapping to fully utilize Kendo's dynamic collapsing categories
+    const [expandedStates, setExpandedStates] = useState<Record<string, boolean>>({
+        "Core": true,
+        "Favorites": true,
+        "Human Resources": true,
+        "Project Management": true,
+        "Operations": true,
+        "Reports": true,
+    });
+
+    // Categories list matching user's layout structure
+    const categoriesList: SidebarCategory[] = useMemo(() => [
+        {
+            name: "Favorites",
+            icon: groupIcons["Favorites"],
+            items: [
+                { title: "Timesheets", route: "/timesheet", isFavorite: true },
+                { title: "Projects", route: "#", disabled: true },
+                { title: "Assets", route: "#", disabled: true }
+            ]
+        },
+        {
+            name: "Human Resources",
+            icon: groupIcons["Human Resources"],
+            items: [
+                { title: "Timesheets", route: "/timesheet" },
+                { title: "Employees", route: "#", disabled: true },
+                { title: "Leave Management", route: "#", disabled: true },
+                { title: "Approvals", route: "#", disabled: true }
+            ]
+        },
+        {
+            name: "Project Management",
+            icon: groupIcons["Project Management"],
+            items: [
+                { title: "Projects", route: "#", disabled: true },
+                { title: "Project Planning (Gantt)", route: "/project-planning" },
+                { title: "Tasks", route: "#", disabled: true }
+            ]
+        },
+        {
+            name: "Operations",
+            icon: groupIcons["Operations"],
+            items: [
+                { title: "Assets", route: "#", disabled: true },
+                { title: "Work Orders", route: "#", disabled: true },
+                { title: "Vendors", route: "#", disabled: true },
+                { title: "Physical Items Register", route: "/physical-items" }
+            ]
+        },
+        {
+            name: "Reports",
+            icon: groupIcons["Reports"],
+            items: [
+                { title: "Reports", route: "#", disabled: true },
+                { title: "Analytics", route: "#", disabled: true }
+            ]
+        }
+    ], []);
+
+    // Initialize expanded states once based on active URL route matches
+    useEffect(() => {
+        const updated = { ...expandedStates };
+        categoriesList.forEach((category) => {
+            const hasActiveChild = category.items.some(
+                (item) => item.route !== "#" && (pathname === item.route || pathname?.startsWith(item.route))
+            );
+            if (hasActiveChild) {
+                updated[category.name] = true;
+            }
+        });
+        setExpandedStates(updated);
+    }, [pathname, categoriesList]);
+
+    // Handle panel selection & toggles
     const handleSelect = (event: any) => {
         const route = event.target.props.route;
         const disabled = event.target.props.disabled;
+        const categoryName = event.target.props.categoryName;
 
         if (route && route !== "#" && !disabled) {
             router.push(route);
+        } else if (categoryName) {
+            setExpandedStates((prev) => ({
+                ...prev,
+                [categoryName]: !prev[categoryName]
+            }));
         }
     };
 
-    // Get dynamic navigation groups from Module Registry
-    const navigationGroups = React.useMemo(() => {
-        return ModuleRegistry.getNavigationGroups();
-    }, []);
-
     return (
-        <aside className={`bg-gradient-to-r from-green-800 via-green-750 to-emerald-700 text-white flex flex-col h-full flex-shrink-0 font-sans select-none transition-all duration-300 ease-in-out ${expanded ? "w-64 border-r" : "w-0 overflow-hidden border-r-0"}`}>
-            <div className="flex-1 overflow-y-auto py-6 px-4 min-w-[16rem]">
+        <aside className={`bg-[#052e25] border-r border-[#042820] text-slate-300 flex flex-col h-full flex-shrink-0 font-sans select-none transition-all duration-300 ease-in-out ${expanded ? "w-64" : "w-0 overflow-hidden"}`}>
+            {/* Scrollable Navigation Area */}
+            <div className="flex-1 overflow-y-auto py-4 px-3 min-w-[16rem]">
                 <div className="panelbar-wrapper w-full">
                     <PanelBar onSelect={handleSelect} className="bg-transparent border-none">
-                        {/* 1. Core Dashboard (Always present) */}
+
+                        {/* 1. Core Section (Standalone Dashboard link) */}
                         <PanelBarItem
-                            title="Core"
-                            expanded={true}
-                            className="text-slate-300 font-semibold"
+                            categoryName="Core"
+                            title={
+                                <span className="flex items-center gap-2.5 text-xs uppercase tracking-wider font-semibold py-1 text-[#7ea198]">
+                                    {groupIcons["Core"]}
+                                    <span>Core</span>
+                                </span>
+                            }
+                            expanded={expandedStates["Core"]}
+                            className="panelbar-header-group"
                         >
                             <PanelBarItem
-                                title="Dashboard"
+                                title={
+                                    <span className="flex items-center gap-2.5">
+                                        {childIcons["Dashboard"]}
+                                        <span>Dashboard</span>
+                                    </span>
+                                }
                                 route="/"
                                 selected={pathname === "/"}
-                                className={`text-slate-400 font-medium ${pathname === "/" ? "text-green-400 font-bold" : ""}`}
+                                className="panelbar-child-item"
                             />
                         </PanelBarItem>
 
-                        {/* 2. Dynamically rendered Module Groups */}
-                        {Array.from(navigationGroups.entries()).map(([groupName, moduleIds]) => {
-                            // Expand group if active route lies inside it
-                            const isGroupActive = moduleIds.some((id) => {
-                                const route = ModuleRegistry.getRoute(id);
-                                return route !== "#" && (pathname === route || pathname?.startsWith(route));
-                            });
+                        {/* 2. Collapsible Category Sections */}
+                        {categoriesList.map((category) => (
+                            <PanelBarItem
+                                key={category.name}
+                                categoryName={category.name}
+                                title={
+                                    <span className="flex items-center gap-2.5 text-xs uppercase tracking-wider font-semibold py-1 text-[#7ea198]">
+                                        {category.icon}
+                                        <span>{category.name}</span>
+                                    </span>
+                                }
+                                expanded={expandedStates[category.name]}
+                                className="panelbar-header-group"
+                            >
+                                {category.items.map((item) => {
+                                    const isSelected = item.route !== "#" && (pathname === item.route || pathname?.startsWith(item.route));
+                                    const isDisabled = item.disabled;
 
-                            return (
-                                <PanelBarItem
-                                    key={groupName}
-                                    title={groupName}
-                                    expanded={isGroupActive}
-                                    className="text-slate-300 font-semibold"
-                                >
-                                    {moduleIds.map((id) => {
-                                        const moduleConfig = ModuleRegistry.getModule(id);
-                                        if (!moduleConfig) return null;
+                                    return (
+                                        <PanelBarItem
+                                            key={item.title}
+                                            title={
+                                                <span className="flex items-center justify-between w-full">
+                                                    <span className="flex items-center gap-2.5">
+                                                        {childIcons[item.title] || childIcons["Dashboard"]}
+                                                        <span>{item.title}</span>
+                                                    </span>
+                                                    {item.isFavorite && (
+                                                        <svg className={`w-3.5 h-3.5 ${isSelected ? "text-[#052e25] fill-[#052e25]" : "text-amber-400 fill-amber-400"}`} viewBox="0 0 24 24">
+                                                            <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.4 8.168L12 18.896l-7.334 3.857 1.4-8.168L.132 9.21l8.2-1.192z" />
+                                                        </svg>
+                                                    )}
+                                                </span>
+                                            }
+                                            route={item.route}
+                                            disabled={isDisabled}
+                                            selected={isSelected}
+                                            className="panelbar-child-item"
+                                        />
+                                    );
+                                })}
+                            </PanelBarItem>
+                        ))}
 
-                                        const route = ModuleRegistry.getRoute(id);
-                                        const isSelected = route !== "#" && (pathname === route || pathname?.startsWith(route));
-                                        const isDisabled = route === "#";
-
-                                        return (
-                                            <PanelBarItem
-                                                key={id}
-                                                title={moduleConfig.title}
-                                                route={route}
-                                                selected={isSelected}
-                                                disabled={isDisabled}
-                                                className={`font-medium ${isDisabled
-                                                    ? "text-slate-600 cursor-not-allowed opacity-50"
-                                                    : isSelected
-                                                        ? "text-green-400 font-bold"
-                                                        : "text-slate-400 hover:text-white"
-                                                    }`}
-                                            />
-                                        );
-                                    })}
-                                </PanelBarItem>
-                            );
-                        })}
+                        {/* 3. Settings Collapsed Section */}
+                        <PanelBarItem
+                            categoryName="Settings"
+                            title={
+                                <span className="flex items-center gap-2.5 text-xs uppercase tracking-wider font-semibold py-1 text-[#7ea198]">
+                                    {groupIcons["Settings"]}
+                                    <span>Settings</span>
+                                </span>
+                            }
+                            expanded={false}
+                            className="panelbar-header-group"
+                        />
                     </PanelBar>
                 </div>
             </div>
 
-            {/* Sidebar Footer Context Info */}
-            <div className="p-4 border-t border-slate-800 bg-slate-950/40 text-xs text-slate-500 flex flex-col gap-1">
-                <div>Logged in as: <span className="font-semibold text-slate-400">Rajvi</span></div>
-                <div>Tenant: <span className="font-semibold text-slate-400">DIW001</span></div>
-                <div>Version: <span className="font-semibold text-slate-400">v2.0 (React POC)</span></div>
+            {/* High-Fidelity Profile Footer Card */}
+            <div className="p-4 border-t border-[#042820] bg-[#03231c]/60 flex-shrink-0">
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
+                            R
+                        </div>
+                        <div>
+                            <div className="font-semibold text-xs text-white">Rajvi Test</div>
+                            <div className="text-[10px] text-[#7ea198] font-medium">Administrator</div>
+                        </div>
+                    </div>
+                    <svg className="w-4 h-4 text-[#7ea198] cursor-pointer hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 15l7-7 7 7" />
+                    </svg>
+                </div>
+                <div className="text-[10px] text-[#7ea198]/80 space-y-0.5 border-t border-[#053329] pt-2">
+                    <div>Tenant: <span className="font-semibold text-white">DIW001</span></div>
+                    <div>Version: <span className="font-semibold text-white">v2.0 (React POC)</span></div>
+                </div>
             </div>
         </aside>
     );

@@ -9,12 +9,12 @@ interface TopNavbarProps {
 
 export default function TopNavbar({ onToggleSidebar }: TopNavbarProps) {
     return (
-        <header className="h-16 bg-gradient-to-r from-green-800 via-green-750 to-emerald-700 text-white flex items-center justify-between px-6 shadow-md z-10 flex-shrink-0">
+        <header className="h-16 bg-[#052e25] border-b border-[#042820] text-white flex items-center justify-between px-6 shadow-sm z-10 flex-shrink-0">
             <div className="flex items-center gap-4">
                 {/* Hamburger Icon */}
-                <button 
+                <button
                     onClick={onToggleSidebar}
-                    className="hover:bg-green-800 rounded p-1.5 transition-colors cursor-pointer" 
+                    className="hover:bg-green-800 rounded p-1.5 transition-colors cursor-pointer"
                     aria-label="Toggle navigation"
                 >
                     <svg

@@ -251,7 +251,8 @@ export default function Dashboard() {
         ) : (
           <div className="space-y-8">
             {/* Greeting */}
-            <div className="bg-gradient-to-r from-green-800 to-green-750 text-white rounded-2xl p-6 md:p-8 shadow-md">
+            {/* <div className="bg-gradient-to-r from-green-800 to-green-750 text-white rounded-2xl p-6 md:p-8 shadow-md"> */}
+            <div className="rounded-2xl bg-gradient-to-r from-[#0B4F3A] via-[#126246] to-[#1D7A57] text-white p-6 md:p-8 shadow-md">
               <h2 className="text-xl md:text-2xl font-bold">Welcome back, Rajvi!</h2>
               <p className="text-green-100 text-sm mt-1.5 max-w-xl">
                 Here is a summary of the operations and status logs aggregated dynamically from your registered tenant workspaces.

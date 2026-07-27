@@ -35,7 +35,7 @@ body {
   --kendo-color-primary-hover: #085408;
   --kendo-color-primary-active: #064006;
   --kendo-color-primary-focus: rgba(11, 107, 11, 0.25);
-  
+
   --kendo-selection-bg: rgba(11, 107, 11, 0.1);
   --kendo-selection-text: #0b6b0b;
 
@@ -43,47 +43,75 @@ body {
   --kendo-color-link-hover: #085408;
 }
 
-/* Customize PanelBar to match Sidebar's dark-slate background */
+/* Customize PanelBar to match Sidebar's professional dark forest teal theme */
 .k-panelbar {
   background-color: transparent !important;
   border: none !important;
-  color: #cbd5e1 !important; /* slate-300 */
+  color: rgba(226, 236, 233, 0.75) !important;
 }
 
-.k-panelbar .k-item, 
+.k-panelbar .k-item,
 .k-panelbar .k-panelbar-item {
   background-color: transparent !important;
   border: none !important;
 }
 
 .k-panelbar .k-link {
-  color: #cbd5e1 !important; /* slate-300 */
-  background-color: transparent !important;
-  padding: 8px 12px !important;
-  border-radius: 6px !important;
-  transition: all 0.2s ease !important;
+  transition: all 0.2s ease-in-out !important;
 }
 
-.k-panelbar .k-link:hover {
-  color: #f8fafc !important; /* slate-50 */
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-.k-panelbar .k-link.k-selected {
-  color: #4ade80 !important; /* green-400 */
-  background-color: rgba(11, 107, 11, 0.15) !important;
-  border-left: 3px solid #22c55e !important; /* green-500 */
-  border-radius: 0 6px 6px 0 !important;
+/* Category Headers */
+.k-panelbar .panelbar-header-group>.k-link {
+  color: #7ea198 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
   font-weight: 600 !important;
+  padding: 14px 6px 6px 6px !important;
+  background-color: transparent !important;
+  cursor: pointer !important;
+}
+
+.k-panelbar .panelbar-header-group>.k-link:hover {
+  color: #ffffff !important;
+  background-color: transparent !important;
+}
+
+/* Sub-items (Child Links) */
+.k-panelbar .panelbar-child-item>.k-link {
+  color: rgba(226, 236, 233, 0.75) !important;
+  font-size: 13.5px !important;
+  padding: 8px 12px !important;
+  margin: 3px 0 !important;
+  border-radius: 8px !important;
+  background-color: transparent !important;
+}
+
+.k-panelbar .panelbar-child-item>.k-link:hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Selected Active Child Link (Solid White Capsule Pill) */
+.k-panelbar .panelbar-child-item>.k-link.k-selected {
+  color: #052e25 !important;
+  background-color: #ffffff !important;
+  font-weight: 700 !important;
+  border-left: none !important;
 }
 
 .k-panelbar .k-panelbar-group {
   background-color: transparent !important;
   border: none !important;
-  padding-left: 12px !important;
+  padding-left: 10px !important;
 }
 
 .k-panelbar .k-panelbar-collapse,
 .k-panelbar .k-panelbar-expand {
-  color: #64748b !important; /* slate-500 */
+  color: #7ea198 !important;
+}
+
+.k-panelbar .k-panelbar-collapse:hover,
+.k-panelbar .k-panelbar-expand:hover {
+  color: #ffffff !important;
 }
