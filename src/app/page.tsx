@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import ContentLayout from "@/components/layout/ContentLayout";
-import { timesheetService } from "@/services/timesheetService";
-import { Timesheet } from "@/types/timesheet";
 import Link from "next/link";
+import { ModuleRegistry } from "@/metadata/registry";
 import {
   Chart,
   ChartSeries,
@@ -18,68 +17,226 @@ import {
 } from "@progress/kendo-react-charts";
 
 export default function Dashboard() {
-  const [data, setData] = useState<Timesheet[]>([]);
+  const [dataMap, setDataMap] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
+  const activeModules = useMemo(() => {
+    return ModuleRegistry.getAllModules().filter((mod) => ModuleRegistry.getService(mod.id) !== undefined);
+  }, []);
+
   useEffect(() => {
-    async function loadData() {
+    async function loadAllData() {
+      setLoading(true);
+      const tempMap: Record<string, any> = {};
       try {
-        const records = await timesheetService.getAll();
-        setData(records);
+        await Promise.all(
+          activeModules.map(async (mod) => {
+            const service = ModuleRegistry.getService(mod.id);
+            if (service) {
+              const res = await service.getAll();
+              tempMap[mod.id] = res;
+            }
+          })
+        );
+        setDataMap(tempMap);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load dashboard metrics:", err);
       } finally {
         setLoading(false);
       }
     }
-    loadData();
-  }, []);
+    loadAllData();
+  }, [activeModules]);
 
-  // Compute metrics dynamically from the mock data
-  const metrics = React.useMemo(() => {
-    const totalHours = data.reduce((sum, item) => sum + item.hours, 0);
-    const pendingCount = data.filter((item) => item.status === "Pending Approval").length;
-    const draftCount = data.filter((item) => item.status === "Draft").length;
+  // Compute metrics dynamically from registry and dataMap
+  const aggregatedKpis = useMemo(() => {
+    const list: any[] = [];
 
-    // Unique employees
-    const employees = new Set(data.map((item) => item.employeeName));
-    const activeEmployees = employees.size;
+    activeModules.forEach((mod) => {
+      const data = dataMap[mod.id];
+      if (!data || !mod.kpis) return;
 
-    return {
-      totalHours,
-      pendingCount,
-      draftCount,
-      activeEmployees,
-    };
-  }, [data]);
+      // Flatten tree helper (e.g. for gantt tasks)
+      const getFlatData = (nodes: any[]): any[] => {
+        let flat: any[] = [];
+        nodes.forEach((n) => {
+          flat.push(n);
+          if (n.children && n.children.length > 0) {
+            flat = flat.concat(getFlatData(n.children));
+          }
+        });
+        return flat;
+      };
 
-  // Group and compute chart trend data
-  const chartData = React.useMemo(() => {
-    const dailyMap: Record<string, number> = {};
+      const isGantt = mod.views.includes("gantt") && mod.defaultView === "gantt";
+      const targetList = isGantt ? getFlatData(data.tasks || []) : data;
 
-    // Seed standard range of dates to make a beautiful smooth line chart
-    const days = ["2026-07-18", "2026-07-19", "2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24"];
-    days.forEach(d => { dailyMap[d] = 0; });
+      const evaluateFilter = (item: any, filter?: any): boolean => {
+        if (!filter) return true;
+        return Object.keys(filter).every((key) => {
+          const val = item[key];
+          const criteria = filter[key];
+          if (criteria && typeof criteria === "object") {
+            return Object.keys(criteria).every((op) => {
+              const limit = criteria[op];
+              if (op === "gte") return Number(val) >= Number(limit);
+              if (op === "gt") return Number(val) > Number(limit);
+              if (op === "lte") return Number(val) <= Number(limit);
+              if (op === "lt") return Number(val) < Number(limit);
+              if (op === "eq") return val === limit;
+              return false;
+            });
+          }
+          return val === criteria;
+        });
+      };
 
-    data.forEach((item) => {
-      const dateStr = item.date;
-      if (dateStr) {
-        dailyMap[dateStr] = (dailyMap[dateStr] || 0) + (Number(item.hours) || 0);
+      mod.kpis.forEach((kpi) => {
+        let value: any = 0;
+        const isTree = kpi.type.endsWith("-tree");
+        const kpiData = isTree ? targetList : (Array.isArray(data) ? data : []);
+
+        if (kpiData.length === 0 && !isTree) return;
+
+        if (kpi.type === "sum" || kpi.type === "sum-tree") {
+          const filtered = kpiData.filter((item: any) => evaluateFilter(item, kpi.filter));
+          const sum = filtered.reduce((acc: any, item: any) => acc + (Number(item[kpi.field]) || 0), 0);
+          value = kpi.suffix ? `${sum.toFixed(1)}${kpi.suffix}` : sum.toFixed(1);
+        } else if (kpi.type === "count" || kpi.type === "count-tree") {
+          const filtered = kpiData.filter((item: any) => evaluateFilter(item, kpi.filter));
+          value = filtered.length;
+        } else if (kpi.type === "average" || kpi.type === "average-tree") {
+          const filtered = kpiData.filter((item: any) => evaluateFilter(item, kpi.filter));
+          const sum = filtered.reduce((acc: any, item: any) => acc + (Number(item[kpi.field]) || 0), 0);
+          const avg = sum / (filtered.length || 1);
+          value = kpi.format === "percent" ? `${(avg * 100).toFixed(0)}%` : avg.toFixed(1);
+        }
+
+        list.push({
+          label: kpi.label,
+          value,
+          moduleTitle: mod.title,
+          color: kpi.color || "text-slate-900",
+          icon: kpi.icon || "📊",
+        });
+      });
+    });
+
+    return list;
+  }, [dataMap, activeModules]);
+
+  // Compute charts data dynamically from registry and dataMap
+  const compiledCharts = useMemo(() => {
+    const list: any[] = [];
+
+    activeModules.forEach((mod) => {
+      const data = dataMap[mod.id];
+      if (!data || !mod.charts) return;
+
+      mod.charts.forEach((chartDef) => {
+        // Group and aggregate daily map
+        const aggregateMap: Record<string, number> = {};
+
+        // Seed static range for timesheets hours logged trend to maintain visual excellence
+        if (mod.id === "timesheets" && chartDef.id === "hours-trend") {
+          const days = ["2026-07-18", "2026-07-19", "2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24"];
+          days.forEach((d) => { aggregateMap[d] = 0; });
+        }
+
+        const rawArray = Array.isArray(data) ? data : [];
+        rawArray.forEach((item) => {
+          const catVal = item[chartDef.categoryField];
+          const seriesVal = Number(item[chartDef.seriesField]) || 0;
+          if (catVal) {
+            aggregateMap[catVal] = (aggregateMap[catVal] || 0) + seriesVal;
+          }
+        });
+
+        const sortedCategories = Object.keys(aggregateMap).sort();
+        const chartPoints = sortedCategories.map((cat) => {
+          let label = cat;
+          // Format date string nicely if it is indeed a date
+          if (cat.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            label = new Date(cat).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+            });
+          }
+          return {
+            category: label,
+            value: aggregateMap[cat],
+          };
+        });
+
+        list.push({
+          id: chartDef.id,
+          title: chartDef.title,
+          type: chartDef.type,
+          color: chartDef.color || "#0b6b0b",
+          points: chartPoints,
+          moduleTitle: mod.title,
+        });
+      });
+    });
+
+    return list;
+  }, [dataMap, activeModules]);
+
+  // Gather recent activities dynamically from all active modules
+  const recentActivities = useMemo(() => {
+    const list: any[] = [];
+
+    activeModules.forEach((mod) => {
+      const data = dataMap[mod.id];
+      if (!data) return;
+
+      if (mod.id === "timesheets" && Array.isArray(data)) {
+        data.slice(0, 4).forEach((item) => {
+          list.push({
+            id: `ts-${item.id}`,
+            title: item.employeeName,
+            subtext: item.taskDescription,
+            timestamp: item.date,
+            badgeText: item.status,
+            badgeStyle:
+              item.status === "Approved"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-150"
+                : item.status === "Pending Approval"
+                  ? "bg-amber-50 text-amber-700 border-amber-150"
+                  : "bg-slate-50 text-slate-700 border-slate-150",
+            route: "/timesheet",
+          });
+        });
+      }
+
+      if (mod.id === "project-planning" && data.tasks) {
+        // Flatten list and get active items
+        const getFlat = (nodes: any[]): any[] => {
+          let flat: any[] = [];
+          nodes.forEach((n) => {
+            flat.push(n);
+            if (n.children) flat = flat.concat(getFlat(n.children));
+          });
+          return flat;
+        };
+
+        const flatTasks = getFlat(data.tasks);
+        flatTasks.slice(0, 3).forEach((item) => {
+          list.push({
+            id: `proj-${item.id}`,
+            title: item.title,
+            subtext: `Task progress updated to ${(item.percentComplete * 100).toFixed(0)}%`,
+            timestamp: item.start ? new Date(item.start).toISOString().split("T")[0] : "",
+            badgeText: `${(item.percentComplete * 100).toFixed(0)}% Done`,
+            badgeStyle: "bg-blue-50 text-blue-700 border-blue-150",
+            route: "/project-planning",
+          });
+        });
       }
     });
 
-    const sortedDates = Object.keys(dailyMap).sort();
-    return sortedDates.map((date) => {
-      const formattedDate = new Date(date).toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-      });
-      return {
-        date: formattedDate,
-        hours: dailyMap[date],
-      };
-    });
-  }, [data]);
+    return list.slice(0, 5); // Return top 5 dynamic actions
+  }, [dataMap, activeModules]);
 
   return (
     <AppLayout>
@@ -97,142 +254,95 @@ export default function Dashboard() {
             <div className="bg-gradient-to-r from-green-800 to-green-750 text-white rounded-2xl p-6 md:p-8 shadow-md">
               <h2 className="text-xl md:text-2xl font-bold">Welcome back, Rajvi!</h2>
               <p className="text-green-100 text-sm mt-1.5 max-w-xl">
-                Here is a summary of the operations and timesheet submissions across your current tenant workspaces.
+                Here is a summary of the operations and status logs aggregated dynamically from your registered tenant workspaces.
               </p>
             </div>
 
-            {/* Metrics Grid */}
+            {/* Dynamic Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {/* Stat 1 */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Total Hours Logged
-                  </span>
-                  <h3 className="text-3xl font-extrabold text-slate-900 mt-2">
-                    {metrics.totalHours.toFixed(1)} hrs
-                  </h3>
+              {aggregatedKpis.map((kpi, index) => (
+                <div key={index} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-all duration-200">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        {kpi.label}
+                      </span>
+                      <span className="text-lg">{kpi.icon}</span>
+                    </div>
+                    <h3 className={`text-3xl font-extrabold mt-2 ${kpi.color}`}>
+                      {kpi.value}
+                    </h3>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-medium mt-4 flex items-center justify-between border-t border-slate-100 pt-2">
+                    <span>Module: <strong>{kpi.moduleTitle}</strong></span>
+                    <span>Live</span>
+                  </div>
                 </div>
-                <div className="text-xs text-green-600 font-medium mt-4 flex items-center gap-1">
-                  <span>&bull;</span> Updated in real-time
-                </div>
-              </div>
-
-              {/* Stat 2 */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Pending Approvals
-                  </span>
-                  <h3 className="text-3xl font-extrabold text-amber-600 mt-2">
-                    {metrics.pendingCount}
-                  </h3>
-                </div>
-                <div className="text-xs text-slate-500 font-medium mt-4">
-                  Awaiting manager action
-                </div>
-              </div>
-
-              {/* Stat 3 */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Draft Submissions
-                  </span>
-                  <h3 className="text-3xl font-extrabold text-blue-600 mt-2">
-                    {metrics.draftCount}
-                  </h3>
-                </div>
-                <div className="text-xs text-slate-500 font-medium mt-4">
-                  In progress by employees
-                </div>
-              </div>
-
-              {/* Stat 4 */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Active Collaborators
-                  </span>
-                  <h3 className="text-3xl font-extrabold text-slate-900 mt-2">
-                    {metrics.activeEmployees}
-                  </h3>
-                </div>
-                <div className="text-xs text-slate-500 font-medium mt-4">
-                  Across DIW001 workspaces
-                </div>
-              </div>
+              ))}
             </div>
 
-            {/* Premium Chart Trend Analysis */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h4 className="font-bold text-slate-900 text-base">Hours Logged Trend</h4>
-                  <p className="text-xs text-slate-400">Daily aggregate of operational hours recorded across your workspaces</p>
+            {/* Dynamic Charts Trend Analysis */}
+            {compiledCharts.map((chart) => (
+              <div key={chart.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 hover:shadow-md transition-all duration-200">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-base">{chart.title}</h4>
+                    <p className="text-xs text-slate-400">Dynamic trend data extracted from the {chart.moduleTitle} module registry.</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-100">
+                    <span className="text-[10px] bg-white shadow-sm border border-slate-100 text-green-700 font-bold px-2 py-1 rounded">
+                      Registry Graph
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-lg border border-slate-100">
-                  <span className="text-[10px] bg-white shadow-sm border border-slate-100 text-green-700 font-bold px-2 py-1 rounded">
-                    Trend Analysis
-                  </span>
+                <div className="h-64">
+                  <Chart style={{ height: "100%" }}>
+                    <ChartCategoryAxis>
+                      <ChartCategoryAxisItem categories={chart.points.map((p: any) => p.category)} />
+                    </ChartCategoryAxis>
+                    <ChartValueAxis>
+                      <ChartValueAxisItem title={{ text: "Aggregate Values" }} />
+                    </ChartValueAxis>
+                    <ChartSeries>
+                      <ChartSeriesItem
+                        type={chart.type as any}
+                        data={chart.points.map((p: any) => p.value)}
+                        color={chart.color}
+                        opacity={0.15}
+                        markers={{ visible: true, size: 6, border: { color: chart.color, width: 2 } }}
+                        line={{ style: "smooth", width: 3 }}
+                      />
+                    </ChartSeries>
+                    <ChartTooltip render={(props: any) => `${props?.value?.toFixed(1)}`} />
+                  </Chart>
                 </div>
               </div>
-              <div className="h-64">
-                <Chart style={{ height: "100%" }}>
-                  <ChartCategoryAxis>
-                    <ChartCategoryAxisItem categories={chartData.map((d) => d.date)} />
-                  </ChartCategoryAxis>
-                  <ChartValueAxis>
-                    <ChartValueAxisItem title={{ text: "Hours" }} />
-                  </ChartValueAxis>
-                  <ChartSeries>
-                    <ChartSeriesItem
-                      type="area"
-                      data={chartData.map((d: { hours: number; date: string }) => d.hours)}
-                      color="#0b6b0b"
-                      opacity={0.15}
-                      markers={{ visible: true, size: 6, border: { color: "#0b6b0b", width: 2 } }}
-                      line={{ style: "smooth", width: 3 }}
-                    />
-                  </ChartSeries>
-                  <ChartTooltip render={(props: any) => `${props?.value?.toFixed(1)} hours`} />
-                </Chart>
-              </div>
-            </div>
+            ))}
 
             {/* Dashboard Content split layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Recent Activity List */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 lg:col-span-2">
+              {/* Dynamic Recent Activity List */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 lg:col-span-2 hover:shadow-md transition-all duration-200">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-bold text-slate-900 text-base">Recent Activity Logs</h4>
-                  <Link
-                    href="/timesheet"
-                    className="text-xs font-semibold text-green-700 hover:text-green-900 hover:underline"
-                  >
-                    View All Timesheets &rarr;
-                  </Link>
                 </div>
                 <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto pr-1">
-                  {data.slice(0, 4).map((item) => (
+                  {recentActivities.map((item) => (
                     <div key={item.id} className="py-3 flex justify-between items-center text-sm">
                       <div className="space-y-1 pr-4">
-                        <p className="font-semibold text-slate-800">{item.employeeName}</p>
+                        <Link href={item.route} className="font-semibold text-slate-800 hover:text-green-700 hover:underline">
+                          {item.title}
+                        </Link>
                         <p className="text-slate-500 text-xs truncate max-w-sm md:max-w-md">
-                          {item.taskDescription}
+                          {item.subtext}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                        <span className="text-xs text-slate-400 font-medium">{item.date}</span>
+                        <span className="text-xs text-slate-400 font-medium">{item.timestamp}</span>
                         <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.status === "Approved"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-150"
-                            : item.status === "Pending Approval"
-                              ? "bg-amber-50 text-amber-700 border-amber-150"
-                              : "bg-slate-50 text-slate-700 border-slate-150"
-                            }`}
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.badgeStyle}`}
                         >
-                          {item.status}
+                          {item.badgeText}
                         </span>
                       </div>
                     </div>
@@ -241,39 +351,45 @@ export default function Dashboard() {
               </div>
 
               {/* Quick Navigation Cards */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-all duration-200">
                 <div>
                   <h4 className="font-bold text-slate-900 text-base mb-3">Quick Navigation</h4>
                   <p className="text-slate-500 text-xs leading-relaxed mb-4">
-                    Access the interactive modernized modules. The POC highlights modular structure where each section inherits generic schemas.
+                    Access the active modernized modules. The platform loads dynamic screens using compiled metadata blueprints.
                   </p>
                   <div className="space-y-2.5">
-                    <Link
-                      href="/timesheet"
-                      className="flex items-center justify-between p-3 rounded-lg border border-slate-150 hover:border-green-300 hover:bg-green-50/20 transition-all text-sm font-semibold text-slate-800 hover:text-green-700 group cursor-pointer"
-                    >
-                      <span>Timesheets Module</span>
-                      <span className="text-slate-400 group-hover:text-green-600 transition-colors">
-                        &rarr;
-                      </span>
-                    </Link>
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/50 text-sm font-semibold text-slate-400 cursor-not-allowed select-none">
-                      <span>Assets (Future)</span>
-                      <span className="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded">
-                        Locked
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/50 text-sm font-semibold text-slate-400 cursor-not-allowed select-none">
-                      <span>Vendors (Future)</span>
-                      <span className="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded">
-                        Locked
-                      </span>
-                    </div>
+                    {ModuleRegistry.getAllModules().map((mod) => {
+                      const route = ModuleRegistry.getRoute(mod.id);
+                      const isLocked = route === "#";
+
+                      return (
+                        <div key={mod.id}>
+                          {isLocked ? (
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/50 text-sm font-semibold text-slate-400 cursor-not-allowed select-none">
+                              <span>{mod.title}</span>
+                              <span className="text-[10px] bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded">
+                                Locked
+                              </span>
+                            </div>
+                          ) : (
+                            <Link
+                              href={route}
+                              className="flex items-center justify-between p-3 rounded-lg border border-slate-150 hover:border-green-300 hover:bg-green-50/20 transition-all text-sm font-semibold text-slate-800 hover:text-green-700 group cursor-pointer"
+                            >
+                              <span>{mod.title}</span>
+                              <span className="text-slate-400 group-hover:text-green-600 transition-colors">
+                                &rarr;
+                              </span>
+                            </Link>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
                 <div className="text-[11px] text-slate-400 mt-6 pt-3 border-t border-slate-100">
-                  Key360 modernized interface developed with React & KendoReact.
+                  Key360 Enterprise Metadata-Driven Platform Engine.
                 </div>
               </div>
             </div>

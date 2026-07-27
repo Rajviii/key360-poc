@@ -8,8 +8,8 @@ import GenericGrid from "@/components/grid/GenericGrid";
 import GenericGantt from "@/components/grid/GenericGantt";
 import FormDialog from "@/components/dialogs/FormDialog";
 import DynamicForm from "@/components/form/DynamicForm";
-import TimesheetForm from "@/components/form/TimesheetForm";
-import { ModuleConfig } from "@/types/metadata";
+import TimesheetForm from "@/components/form/TimesheetForm"; // Kept for safety/parity reference
+import { ModuleConfig } from "@/metadata/engine";
 
 interface ModuleRendererProps {
   config: ModuleConfig;
@@ -31,7 +31,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
     setLoading(true);
     try {
       const response = await service.getAll();
-      if (config.viewType === "gantt") {
+      if (config.views.includes("gantt") && config.defaultView === "gantt") {
         setData(response.tasks || []);
         setDependencies(response.dependencies || []);
       } else {
@@ -49,13 +49,35 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
     fetchData();
   }, [config.id, service]);
 
+  // Enforce localized Permission Engine checks
+  const permissions = React.useMemo(() => {
+    return config.permissions || { read: true, create: true, update: true, delete: true };
+  }, [config.permissions]);
+
+  // Filter toolbar buttons based on access control permissions
+  const allowedButtons = React.useMemo(() => {
+    return config.toolbarButtons.filter((btn) => {
+      if (btn.actionType === "add" && !permissions.create) return false;
+      if (btn.actionType === "delete" && !permissions.delete) return false;
+      return true;
+    });
+  }, [config.toolbarButtons, permissions]);
+
   // Handle actions triggered from the Toolbar
   const handleToolbarAction = async (actionType: string) => {
     if (actionType === "add") {
+      if (!permissions.create) {
+        alert("Permission Denied: You cannot create new entries.");
+        return;
+      }
       setDialogMode("add");
     } else if (actionType === "refresh") {
       await fetchData();
     } else if (actionType === "delete") {
+      if (!permissions.delete) {
+        alert("Permission Denied: You cannot delete records.");
+        return;
+      }
       if (selectedItem) {
         await handleDelete(selectedItem);
       }
@@ -66,12 +88,20 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
 
   // Handle Edit Action on Row / Gantt item
   const handleEditInitiate = (item: any) => {
+    if (!permissions.update) {
+      alert("Permission Denied: You do not have permission to modify records.");
+      return;
+    }
     setSelectedItem(item);
     setDialogMode("edit");
   };
 
   // Handle Delete Action on Row
   const handleDelete = async (item: any) => {
+    if (!permissions.delete) {
+      alert("Permission Denied: You do not have permission to delete records.");
+      return;
+    }
     const displayName = item.employeeName || item.title || item.id;
     if (confirm(`Are you sure you want to delete this record (${displayName})?`)) {
       setLoading(true);
@@ -122,7 +152,6 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
     const fields = config.gridColumns.map(c => c.field);
     const headers = config.gridColumns.map(c => c.title);
 
-    // Flat mapping function to handle nested task trees if it's Gantt data
     const getFlatRows = (nodes: any[]): any[] => {
       let flat: any[] = [];
       nodes.forEach((node) => {
@@ -134,7 +163,8 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
       return flat;
     };
 
-    const rowsToExport = config.viewType === "gantt" ? getFlatRows(data) : data;
+    const isGantt = config.views.includes("gantt") && config.defaultView === "gantt";
+    const rowsToExport = isGantt ? getFlatRows(data) : data;
 
     const csvContent =
       "data:text/csv;charset=utf-8,\uFEFF" +
@@ -163,52 +193,72 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
     return selectedItem.employeeName || selectedItem.title || `ID: ${selectedItem.id}`;
   };
 
-  // Dynamic Module KPIs
+  // Dynamic Module KPIs using resolved config specifications
   const stats = React.useMemo(() => {
-    if (!data || data.length === 0) return null;
+    if (!data || data.length === 0 || !config.kpis) return null;
 
-    if (config.id === "timesheets") {
-      const totalHours = data.reduce((sum, item) => sum + (Number(item.hours) || 0), 0);
-      const pendingCount = data.filter((item) => item.status === "Pending Approval").length;
-      const approvedCount = data.filter((item) => item.status === "Approved").length;
-      const totalLogs = data.length;
+    const getFlatData = (list: any[]): any[] => {
+      let flat: any[] = [];
+      list.forEach((item) => {
+        flat.push(item);
+        if (item.children && item.children.length > 0) {
+          flat = flat.concat(getFlatData(item.children));
+        }
+      });
+      return flat;
+    };
 
-      return [
-        { label: "Total Hours Logged", value: `${totalHours.toFixed(1)} hrs`, color: "text-slate-900", subtext: "Across all workspaces", icon: "🕒" },
-        { label: "Pending Approvals", value: pendingCount, color: "text-amber-600", subtext: "Awaiting manager action", icon: "⏳" },
-        { label: "Approved Records", value: approvedCount, color: "text-emerald-600", subtext: "Processed & finalized", icon: "✅" },
-        { label: "Total Submissions", value: totalLogs, color: "text-blue-600", subtext: "Total recorded logs", icon: "📊" },
-      ];
-    }
+    const isGantt = config.views.includes("gantt") && config.defaultView === "gantt";
+    const flatData = isGantt ? getFlatData(data) : data;
 
-    if (config.id === "project-planning") {
-      const getFlatTasks = (tasksList: any[]): any[] => {
-        let flat: any[] = [];
-        tasksList.forEach((t) => {
-          flat.push(t);
-          if (t.children && t.children.length > 0) {
-            flat = flat.concat(getFlatTasks(t.children));
-          }
-        });
-        return flat;
+    const evaluateFilter = (item: any, filter?: any): boolean => {
+      if (!filter) return true;
+      return Object.keys(filter).every((key) => {
+        const val = item[key];
+        const criteria = filter[key];
+        if (criteria && typeof criteria === "object") {
+          return Object.keys(criteria).every((op) => {
+            const limit = criteria[op];
+            if (op === "gte") return Number(val) >= Number(limit);
+            if (op === "gt") return Number(val) > Number(limit);
+            if (op === "lte") return Number(val) <= Number(limit);
+            if (op === "lt") return Number(val) < Number(limit);
+            if (op === "eq") return val === limit;
+            return false;
+          });
+        }
+        return val === criteria;
+      });
+    };
+
+    return config.kpis.map((kpi: any) => {
+      let value: any = 0;
+      const isTree = kpi.type.endsWith("-tree");
+      const targetData = isTree ? flatData : data;
+
+      if (kpi.type === "sum" || kpi.type === "sum-tree") {
+        const filtered = targetData.filter((item) => evaluateFilter(item, kpi.filter));
+        const sum = filtered.reduce((acc, item) => acc + (Number(item[kpi.field]) || 0), 0);
+        value = kpi.suffix ? `${sum.toFixed(1)}${kpi.suffix}` : sum.toFixed(1);
+      } else if (kpi.type === "count" || kpi.type === "count-tree") {
+        const filtered = targetData.filter((item) => evaluateFilter(item, kpi.filter));
+        value = filtered.length;
+      } else if (kpi.type === "average" || kpi.type === "average-tree") {
+        const filtered = targetData.filter((item) => evaluateFilter(item, kpi.filter));
+        const sum = filtered.reduce((acc, item) => acc + (Number(item[kpi.field]) || 0), 0);
+        const avg = sum / (filtered.length || 1);
+        value = kpi.format === "percent" ? `${(avg * 100).toFixed(0)}%` : avg.toFixed(1);
+      }
+
+      return {
+        label: kpi.label,
+        value,
+        color: kpi.color || "text-slate-900",
+        subtext: kpi.subtext || (isTree ? "Hierarchical breakdowns" : "Total logs recorded"),
+        icon: kpi.icon || "📊",
       };
-
-      const flatTasks = getFlatTasks(data);
-      const totalTasks = flatTasks.length;
-      const avgProgress = flatTasks.reduce((sum, item) => sum + (Number(item.percentComplete) || 0), 0) / (totalTasks || 1);
-      const completedCount = flatTasks.filter((item) => Number(item.percentComplete) >= 1.0).length;
-      const inProgressCount = flatTasks.filter((item) => Number(item.percentComplete) > 0 && Number(item.percentComplete) < 1.0).length;
-
-      return [
-        { label: "Total Tasks", value: totalTasks, color: "text-slate-900", subtext: "Planning breakdown structures", icon: "📋" },
-        { label: "Average Progress", value: `${(avgProgress * 100).toFixed(0)}%`, color: "text-blue-600", subtext: "Overall project completion", icon: "📈" },
-        { label: "Completed Tasks", value: completedCount, color: "text-emerald-600", subtext: "100% complete tasks", icon: "✅" },
-        { label: "In Progress Tasks", value: inProgressCount, color: "text-amber-600", subtext: "Currently active items", icon: "⚙️" },
-      ];
-    }
-
-    return null;
-  }, [data, config.id]);
+    });
+  }, [data, config.kpis, config.defaultView, config.views]);
 
   return (
     <AppLayout>
@@ -243,7 +293,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
 
           {/* Metadata-driven Toolbar */}
           <ModuleToolbar
-            buttons={config.toolbarButtons}
+            buttons={allowedButtons}
             onAction={handleToolbarAction}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -263,7 +313,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
               </div>
             )}
 
-            {config.viewType === "gantt" ? (
+            {config.views.includes("gantt") && config.defaultView === "gantt" ? (
               <GenericGantt
                 data={data}
                 dependencies={dependencies}
@@ -283,6 +333,10 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
                 onDelete={handleDelete}
                 onRowClick={(item) => setSelectedItem(item.id === selectedItem?.id ? null : item)}
                 onSave={async (id, payload) => {
+                  if (!permissions.update) {
+                    alert("Permission Denied: You do not have permission to modify records.");
+                    return;
+                  }
                   setLoading(true);
                   try {
                     if (payload.hours) payload.hours = Number(payload.hours);
@@ -321,21 +375,17 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
           <FormDialog
             title={dialogMode === "add" ? `Add ${config.title} Entry` : `Modify ${config.title} Entry`}
             onClose={() => setDialogMode("none")}
+            width={config.formLayout === "split-cards" || config.formFields.length > 8 ? 950 : 700}
           >
-            {config.id === "timesheets" ? (
-              <TimesheetForm
-                initialValues={dialogMode === "edit" ? selectedItem : undefined}
-                onSubmit={handleFormSubmit}
-                onCancel={() => setDialogMode("none")}
-              />
-            ) : (
-              <DynamicForm
-                fields={config.formFields}
-                initialValues={dialogMode === "edit" ? selectedItem : undefined}
-                onSubmit={handleFormSubmit}
-                onCancel={() => setDialogMode("none")}
-              />
-            )}
+            <DynamicForm
+              fields={config.formFields}
+              initialValues={dialogMode === "edit" ? selectedItem : undefined}
+              onSubmit={handleFormSubmit}
+              onCancel={() => setDialogMode("none")}
+              formLayout={config.formLayout}
+              formSections={config.formSections}
+              formWidgets={config.formWidgets}
+            />
           </FormDialog>
         )}
       </ContentLayout>

@@ -7,18 +7,20 @@ interface FormDialogProps {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  width?: number;
 }
 
 export default function FormDialog({
   title,
   onClose,
   children,
+  width = 700,
 }: FormDialogProps) {
   return (
     <Dialog
       title={title}
       onClose={onClose}
-      width={700}
+      width={width}
       className="p-0 rounded-xl overflow-hidden shadow-2xl border border-slate-200"
     >
       <div className="p-6 bg-slate-50 border-b border-slate-100">

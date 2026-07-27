@@ -1,155 +1,42 @@
-import { ModuleConfig } from "@/types/metadata";
+import { resolveModuleConfig } from "./engine";
 
-export const timesheetModuleConfig: ModuleConfig = {
+export const timesheetModuleConfig = resolveModuleConfig({
   id: "timesheets",
+  extends: "approval",
   title: "Timesheets",
   breadcrumbs: ["Human Resources", "Timesheets"],
-  gridColumns: [
-    {
-      field: "employeeName",
-      title: "Employee Name",
-      width: 200,
-      filter: "text",
-      sortable: true,
-      resizable: true,
-      reorderable: true,
-    },
-    {
-      field: "date",
-      title: "Date",
-      width: 150,
-      filter: "date",
-      sortable: true,
-      resizable: true,
-      reorderable: true,
-      type: "date",
-    },
-    {
-      field: "projectCode",
-      title: "Project",
-      width: 140,
-      filter: "text",
-      sortable: true,
-      resizable: true,
-      reorderable: true,
-    },
-    {
-      field: "hours",
-      title: "Hours Worked",
-      width: 140,
-      filter: "numeric",
-      sortable: true,
-      resizable: true,
-      reorderable: true,
-      type: "number",
-    },
-    {
-      field: "status",
-      title: "Approval Status",
-      width: 160,
-      filter: "text",
-      sortable: true,
-      resizable: true,
-      reorderable: true,
-      type: "badge",
-    },
-    {
-      field: "taskDescription",
-      title: "Task Description",
-      filter: "text",
-      sortable: true,
-      resizable: true,
-      reorderable: true,
-    },
+  endpoint: "timesheets",
+  columnRefs: [
+    "employeeName",
+    "date",
+    "projectCode",
+    "hours",
+    "status",
+    "taskDescription"
   ],
-  formFields: [
-    {
-      field: "employeeName",
-      label: "Employee Name",
-      type: "text",
-      required: true,
-      placeholder: "Enter full name",
-    },
-    {
-      field: "date",
-      label: "Work Date",
-      type: "date",
-      required: true,
-      defaultValue: new Date().toISOString().split("T")[0],
-    },
-    {
-      field: "projectCode",
-      label: "Project Allocation",
-      type: "select",
-      required: true,
-      options: [
-        { label: "DIW001 - Training / Demo Work", value: "DIW001" },
-        { label: "PRJ-902 - Core UI Refactoring", value: "PRJ-902" },
-        { label: "PRJ-504 - Backend Cloud Caching", value: "PRJ-504" },
-        { label: "OPS-100 - General Admin Operations", value: "OPS-100" },
-      ],
-      defaultValue: "DIW001",
-    },
-    {
-      field: "hours",
-      label: "Hours Worked",
-      type: "number",
-      required: true,
-      placeholder: "e.g. 8.0",
-      defaultValue: 8.0,
-    },
-    {
-      field: "status",
-      label: "Status",
-      type: "select",
-      required: true,
-      options: [
-        { label: "Draft", value: "Draft" },
-        { label: "Pending Approval", value: "Pending Approval" },
-        { label: "Approved", value: "Approved" },
-        { label: "Rejected", value: "Rejected" },
-      ],
-      defaultValue: "Draft",
-    },
-    {
-      field: "taskDescription",
-      label: "Activity Description",
-      type: "textarea",
-      required: true,
-      placeholder: "Describe the tasks completed...",
-    },
-    {
-      field: "comments",
-      label: "Manager Notes / Comments",
-      type: "textarea",
-      required: false,
-      placeholder: "Optional notes...",
-    },
+  fieldRefs: [
+    "employeeName",
+    "date",
+    "projectCode",
+    "hours",
+    "status",
+    "taskDescription",
+    "comments"
   ],
-  toolbarButtons: [
-    {
-      id: "add",
-      label: "Add Record",
-      themeColor: "primary",
-      actionType: "add",
-    },
-    {
-      id: "refresh",
-      label: "Refresh",
-      themeColor: "none",
-      actionType: "refresh",
-    },
-    {
-      id: "delete",
-      label: "Delete",
-      themeColor: "error",
-      actionType: "delete",
-    },
-    {
-      id: "export",
-      label: "Export to Excel",
-      themeColor: "success",
-      actionType: "export",
-    },
+  kpis: [
+    { label: "Total Hours Logged", type: "sum", field: "hours", suffix: " hrs", icon: "🕒" },
+    { label: "Pending Approvals", type: "count", filter: { status: "Pending Approval" }, icon: "⏳", color: "text-amber-600" },
+    { label: "Approved Records", type: "count", filter: { status: "Approved" }, icon: "✅", color: "text-emerald-600" },
+    { label: "Total Submissions", type: "count", icon: "📊", color: "text-blue-600" },
   ],
-};
+  charts: [
+    {
+      id: "hours-trend",
+      title: "Hours Logged Trend",
+      type: "area",
+      seriesField: "hours",
+      categoryField: "date",
+      color: "#0b6b0b",
+    }
+  ]
+});

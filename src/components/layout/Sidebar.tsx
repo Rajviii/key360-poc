@@ -3,6 +3,7 @@
 import React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { PanelBar, PanelBarItem } from "@progress/kendo-react-layout";
+import { ModuleRegistry } from "@/metadata/registry";
 
 interface SidebarProps {
     expanded?: boolean;
@@ -22,12 +23,17 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
         }
     };
 
+    // Get dynamic navigation groups from Module Registry
+    const navigationGroups = React.useMemo(() => {
+        return ModuleRegistry.getNavigationGroups();
+    }, []);
+
     return (
-        <aside className={`bg-slate-900 border-slate-800 text-slate-300 flex flex-col h-full flex-shrink-0 font-sans select-none transition-all duration-300 ease-in-out ${expanded ? "w-64 border-r" : "w-0 overflow-hidden border-r-0"}`}>
+        <aside className={`bg-gradient-to-r from-green-800 via-green-750 to-emerald-700 text-white flex flex-col h-full flex-shrink-0 font-sans select-none transition-all duration-300 ease-in-out ${expanded ? "w-64 border-r" : "w-0 overflow-hidden border-r-0"}`}>
             <div className="flex-1 overflow-y-auto py-6 px-4 min-w-[16rem]">
                 <div className="panelbar-wrapper w-full">
                     <PanelBar onSelect={handleSelect} className="bg-transparent border-none">
-                        {/* 1. Core Section */}
+                        {/* 1. Core Dashboard (Always present) */}
                         <PanelBarItem
                             title="Core"
                             expanded={true}
@@ -41,82 +47,48 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
                             />
                         </PanelBarItem>
 
-                        {/* 2. Human Resources Section */}
-                        <PanelBarItem
-                            title="Human Resources"
-                            expanded={pathname?.startsWith("/timesheet") || pathname === "/timesheet"}
-                            className="text-slate-300 font-semibold"
-                        >
-                            <PanelBarItem
-                                title="Timesheets"
-                                route="/timesheet"
-                                selected={pathname === "/timesheet" || pathname?.startsWith("/timesheet")}
-                                className={`text-slate-400 font-medium ${pathname === "/timesheet" ? "text-green-400 font-bold" : ""}`}
-                            />
-                            <PanelBarItem
-                                title="Leave Management"
-                                route="#"
-                                disabled={true}
-                                className="text-slate-600 font-medium cursor-not-allowed opacity-50"
-                            />
-                            <PanelBarItem
-                                title="Employee Master"
-                                route="#"
-                                disabled={true}
-                                className="text-slate-600 font-medium cursor-not-allowed opacity-50"
-                            />
-                            <PanelBarItem
-                                title="Attendance"
-                                route="#"
-                                disabled={true}
-                                className="text-slate-600 font-medium cursor-not-allowed opacity-50"
-                            />
-                        </PanelBarItem>
+                        {/* 2. Dynamically rendered Module Groups */}
+                        {Array.from(navigationGroups.entries()).map(([groupName, moduleIds]) => {
+                            // Expand group if active route lies inside it
+                            const isGroupActive = moduleIds.some((id) => {
+                                const route = ModuleRegistry.getRoute(id);
+                                return route !== "#" && (pathname === route || pathname?.startsWith(route));
+                            });
 
-                        {/* 3. Project Management Section */}
-                        <PanelBarItem
-                            title="Project Management"
-                            expanded={pathname?.startsWith("/project-planning") || pathname === "/project-planning"}
-                            className="text-slate-300 font-semibold"
-                        >
-                            <PanelBarItem
-                                title="Projects"
-                                route="#"
-                                disabled={true}
-                                className="text-slate-600 font-medium cursor-not-allowed opacity-50"
-                            />
-                            <PanelBarItem
-                                title="Project Planning (Gantt)"
-                                route="/project-planning"
-                                selected={pathname === "/project-planning" || pathname?.startsWith("/project-planning")}
-                                className={`text-slate-400 font-medium ${pathname === "/project-planning" ? "text-green-400 font-bold" : ""}`}
-                            />
-                        </PanelBarItem>
+                            return (
+                                <PanelBarItem
+                                    key={groupName}
+                                    title={groupName}
+                                    expanded={isGroupActive}
+                                    className="text-slate-300 font-semibold"
+                                >
+                                    {moduleIds.map((id) => {
+                                        const moduleConfig = ModuleRegistry.getModule(id);
+                                        if (!moduleConfig) return null;
 
-                        {/* 4. Operations Section */}
-                        <PanelBarItem
-                            title="Operations (Future)"
-                            className="text-slate-300 font-semibold"
-                        >
-                            <PanelBarItem
-                                title="Assets"
-                                route="#"
-                                disabled={true}
-                                className="text-slate-600 font-medium cursor-not-allowed opacity-50"
-                            />
-                            <PanelBarItem
-                                title="Vendors"
-                                route="#"
-                                disabled={true}
-                                className="text-slate-600 font-medium cursor-not-allowed opacity-50"
-                            />
-                            <PanelBarItem
-                                title="Work Orders"
-                                route="#"
-                                disabled={true}
-                                className="text-slate-600 font-medium cursor-not-allowed opacity-50"
-                            />
-                        </PanelBarItem>
+                                        const route = ModuleRegistry.getRoute(id);
+                                        const isSelected = route !== "#" && (pathname === route || pathname?.startsWith(route));
+                                        const isDisabled = route === "#";
+
+                                        return (
+                                            <PanelBarItem
+                                                key={id}
+                                                title={moduleConfig.title}
+                                                route={route}
+                                                selected={isSelected}
+                                                disabled={isDisabled}
+                                                className={`font-medium ${isDisabled
+                                                    ? "text-slate-600 cursor-not-allowed opacity-50"
+                                                    : isSelected
+                                                        ? "text-green-400 font-bold"
+                                                        : "text-slate-400 hover:text-white"
+                                                    }`}
+                                            />
+                                        );
+                                    })}
+                                </PanelBarItem>
+                            );
+                        })}
                     </PanelBar>
                 </div>
             </div>

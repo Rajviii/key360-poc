@@ -4,14 +4,14 @@ import React from "react";
 import ModuleRenderer from "@/modules/ModuleRenderer";
 import { ModuleRegistry } from "@/metadata/registry";
 
-export default function Page() {
-  const config = ModuleRegistry.getModule("timesheets");
-  const service = ModuleRegistry.getService("timesheets");
+export default function PhysicalItemsPage() {
+  const config = ModuleRegistry.getModule("physical-items");
+  const service = ModuleRegistry.getService("physical-items");
 
   if (!config || !service) {
     return (
       <div className="p-8 text-center text-red-500 font-bold">
-        Error: Timesheet module not registered in Framework Registry.
+        Error: Physical Items module not registered.
       </div>
     );
   }

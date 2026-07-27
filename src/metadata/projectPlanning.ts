@@ -1,79 +1,20 @@
-import { ModuleConfig } from "@/types/metadata";
+import { resolveModuleConfig } from "./engine";
 
-export const projectPlanningModuleConfig: ModuleConfig = {
+export const projectPlanningModuleConfig = resolveModuleConfig({
   id: "project-planning",
+  extends: "gantt",
   title: "Project Planning (Gantt)",
   breadcrumbs: ["Project Management", "Project Planning (Gantt)"],
-  viewType: "gantt",
-  gridColumns: [
-    { field: "id", title: "ID", width: 70 },
-    { field: "title", title: "Task Title", width: 220 },
-    { field: "start", title: "Start Date", width: 130, type: "date" },
-    { field: "end", title: "End Date", width: 130, type: "date" },
-    { field: "percentComplete", title: "% Done", width: 90, type: "number" },
-  ],
-  formFields: [
-    {
-      field: "title",
-      label: "Task Name",
-      type: "text",
-      required: true,
-      placeholder: "Enter task name",
-    },
-    {
-      field: "start",
-      label: "Start Date",
-      type: "date",
-      required: true,
-    },
-    {
-      field: "end",
-      label: "End Date",
-      type: "date",
-      required: true,
-    },
-    {
-      field: "percentComplete",
-      label: "Progress (0.0 to 1.0)",
-      type: "number",
-      required: true,
-      defaultValue: 0.0,
-      placeholder: "e.g., 0.5 for 50%",
-    },
-  ],
-  toolbarButtons: [
-    {
-      id: "add",
-      label: "Add Task",
-      actionType: "add",
-      themeColor: "primary",
-    },
-    {
-      id: "refresh",
-      label: "Refresh",
-      actionType: "refresh",
-    },
-  ],
-  ganttConfig: {
-    taskModelFields: {
-      id: "id",
-      start: "start",
-      end: "end",
-      title: "title",
-      percentComplete: "percentComplete",
-      isRollup: "isRollup",
-      isExpanded: "isExpanded",
-      isInEdit: "isInEdit",
-      children: "children",
-    },
-    dependencyModelFields: {
-      id: "id",
-      fromId: "fromId",
-      toId: "toId",
-      type: "type",
-    },
-  },
-};
+  endpoint: "project-planning",
+  columnRefs: ["id", "title", "start", "end", "percentComplete"],
+  fieldRefs: ["title", "start", "end", "percentComplete"],
+  kpis: [
+    { label: "Total Tasks", type: "count-tree", icon: "📋" },
+    { label: "Average Progress", type: "average-tree", field: "percentComplete", format: "percent", icon: "📈", color: "text-blue-600" },
+    { label: "Completed Tasks", type: "count-tree", filter: { percentComplete: { gte: 1.0 } }, icon: "✅", color: "text-emerald-600" },
+    { label: "In Progress Tasks", type: "count-tree", filter: { percentComplete: { gt: 0, lt: 1.0 } }, icon: "⚙️", color: "text-amber-600" },
+  ]
+});
 
 export const initialProjectTasks = [
   {
