@@ -25,6 +25,7 @@ export const physicalItemsModuleConfig = resolveModuleConfig({
     "nextDueDate",
     "nextResponsiblePerson",
     "statusHistory",
+    "documentPdf",
   ],
   fieldRefs: [
     "physicalItemId",
@@ -45,6 +46,7 @@ export const physicalItemsModuleConfig = resolveModuleConfig({
     "nextDueDate",
     "nextResponsiblePerson",
     "statusHistory",
+    "documentPdf",
   ],
   kpis: [
     { label: "Total Registered Items", type: "count", icon: "📦", color: "text-blue-600" },

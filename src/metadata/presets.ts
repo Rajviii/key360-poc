@@ -29,6 +29,7 @@ export const ColumnPresets = {
   nextDueDate: { field: "nextDueDate", title: "Next Due Date", width: 145, type: "date", filter: "date" },
   nextResponsiblePerson: { field: "nextResponsiblePerson", title: "Next Responsible Per:", width: 180, type: "text", filter: "text" },
   statusHistory: { field: "statusHistory", title: "Status History", width: 180, type: "text", filter: "text" },
+  documentPdf: { field: "documentPdf", title: "Document", width: 140, type: "pdf", filter: "text" },
 };
 
 export const FormPresets = {
@@ -85,6 +86,7 @@ export const FormPresets = {
   nextDueDate: { field: "nextDueDate", label: "Next Due Date", type: "date" },
   nextResponsiblePerson: { field: "nextResponsiblePerson", label: "Next Responsible Person", type: "text", placeholder: "Enter responsible person name" },
   statusHistory: { field: "statusHistory", label: "Status History", type: "textarea", placeholder: "Audit log of status updates..." },
+  documentPdf: { field: "documentPdf", label: "Upload Document (PDF)", type: "upload", placeholder: "Choose PDF document" },
 };
 
 export const ToolbarPresets = {

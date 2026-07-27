@@ -31,15 +31,15 @@ body {
 
 :root {
   /* Replace Kendo's default red/orange accent with Key360 brand green */
-  --kendo-color-primary: #0b6b0b;
+  --kendo-color-primary: #042820;
   --kendo-color-primary-hover: #085408;
   --kendo-color-primary-active: #064006;
   --kendo-color-primary-focus: rgba(11, 107, 11, 0.25);
 
   --kendo-selection-bg: rgba(11, 107, 11, 0.1);
-  --kendo-selection-text: #0b6b0b;
+  --kendo-selection-text: #042820;
 
-  --kendo-color-link: #0b6b0b;
+  --kendo-color-link: #042820;
   --kendo-color-link-hover: #085408;
 }
 

@@ -62,6 +62,7 @@ interface GenericGridProps {
   onRowClick?: (item: any) => void;
   dataItemKey?: string;
   onSave?: (id: any, item: any) => Promise<void>;
+  onViewPdf?: (item: any) => void;
 }
 
 export default function GenericGrid({
@@ -73,6 +74,7 @@ export default function GenericGrid({
   onRowClick,
   dataItemKey = "id",
   onSave,
+  onViewPdf,
 }: GenericGridProps) {
   // Premium Chart Integration states & refs
   const gridRef = useRef<GridHandle>(null);
@@ -542,6 +544,49 @@ export default function GenericGrid({
     );
   };
 
+  // PDF Cell Renderer
+  const PdfCell = (props: any) => {
+    if (props.rowType === "edit" || props.dataItem.inEdit) {
+      return (
+        <td {...props.tdProps} className={`px-6 py-4 whitespace-nowrap text-sm ${props.tdProps?.className || ""}`}>
+          {props.children}
+        </td>
+      );
+    }
+
+    const pdfData = props.dataItem[props.field];
+    const hasPdf = !!pdfData;
+
+    return (
+      <td {...props.tdProps} className={`px-6 py-4 whitespace-nowrap text-sm ${props.tdProps?.className || ""}`}>
+        {hasPdf ? (
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onViewPdf) onViewPdf(props.dataItem);
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-250 cursor-pointer transition-colors shadow-sm"
+          >
+            <svg className="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            PDF Attached
+          </span>
+        ) : (
+          <span className="text-slate-400 text-xs italic">No Document</span>
+        )}
+      </td>
+    );
+  };
+
+  // Custom Eye Icon SVG for view PDF button
+  const eyeIconCustom = (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  );
+
   // Action Buttons Renderer
   const ActionsCell = (props: any) => {
     const item = props.dataItem;
@@ -572,8 +617,22 @@ export default function GenericGrid({
       );
     }
 
+    const hasPdfField = columns.some((col) => col.type === "pdf");
+
     return (
       <td className="px-6 py-3 text-right text-sm font-medium space-x-2 actions-cell">
+        {hasPdfField && onViewPdf && (
+          <Button
+            title="View Attached PDF Document"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewPdf(item);
+            }}
+            className="p-1.5 hover:bg-rose-50 rounded text-rose-600 hover:text-rose-800 border-none bg-transparent cursor-pointer"
+          >
+            {eyeIconCustom}
+          </Button>
+        )}
         <Button
           svgIcon={hyperlinkOpenIcon}
           title="Edit Record (Popup)"
@@ -617,8 +676,6 @@ export default function GenericGrid({
         editable={true}
         onItemChange={handleItemChange}
         selectable={{
-          enabled: true,
-          drag: true,
           mode: "multiple",
         }}
         navigatable={true}
@@ -731,6 +788,8 @@ export default function GenericGrid({
             } else if (col.type === "number") {
               cellRenderer = NumberCell;
               editorType = "numeric";
+            } else if (col.type === "pdf") {
+              cellRenderer = PdfCell;
             }
 
             return (

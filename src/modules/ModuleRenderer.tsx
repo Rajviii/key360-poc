@@ -10,6 +10,7 @@ import FormDialog from "@/components/dialogs/FormDialog";
 import DynamicForm from "@/components/form/DynamicForm";
 import TimesheetForm from "@/components/form/TimesheetForm"; // Kept for safety/parity reference
 import { ModuleConfig } from "@/metadata/engine";
+import { PDFViewer } from "@progress/kendo-react-pdf-viewer";
 
 interface ModuleRendererProps {
   config: ModuleConfig;
@@ -25,6 +26,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
 
   // Modal dialog states
   const [dialogMode, setDialogMode] = useState<"none" | "add" | "edit">("none");
+  const [activePdfItem, setActivePdfItem] = useState<any | null>(null);
 
   // Load module data from generic service
   const fetchData = async () => {
@@ -350,6 +352,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
                     setLoading(false);
                   }
                 }}
+                onViewPdf={setActivePdfItem}
               />
             )}
 
@@ -387,6 +390,56 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
               formWidgets={config.formWidgets}
             />
           </FormDialog>
+        )}
+
+        {/* PDF Viewer Modal */}
+        {activePdfItem && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-4xl overflow-hidden flex flex-col h-[85vh]">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <span className="p-1 bg-rose-100 text-rose-700 rounded">
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </span>
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-800">
+                      PDF Document Viewer
+                    </h2>
+                    <p className="text-[10px] text-slate-400">
+                      Item: {activePdfItem.name || activePdfItem.itemName || activePdfItem.id} ({activePdfItem.customId || activePdfItem.physicalItemId || "No Code"})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActivePdfItem(null)}
+                  className="text-slate-400 hover:text-slate-650 font-bold p-1 bg-slate-150 hover:bg-slate-200 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex-1 bg-slate-100 overflow-auto p-4 flex justify-center items-center">
+                {activePdfItem.documentPdf ? (
+                  <div className="w-full h-full bg-white rounded border border-slate-200 shadow-sm overflow-hidden">
+                    <PDFViewer 
+                      data={activePdfItem.documentPdf} 
+                      style={{ width: "100%", height: "100%", minHeight: "550px" }} 
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center space-y-2">
+                    <svg className="w-12 h-12 text-slate-350 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-sm font-semibold text-slate-500">No PDF Document Attached</p>
+                    <p className="text-xs text-slate-400">You can upload a PDF by editing this item record.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </ContentLayout>
     </AppLayout>

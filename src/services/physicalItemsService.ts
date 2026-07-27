@@ -1,3 +1,5 @@
+const SAMPLE_PDF_BASE64 = "JVBERi0xLjQKJVRleHQgUERGIHNhbXBsZQoxIDAgb2JqCjw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCjw8L1R5cGUvUGFnZXMvS2lkc1szIDAgUl0vQ291bnQgMT4+CmVuZG9iajozIDAgb2JqCjw8L1R5cGUvUGFnZS9QYXJlbnQgMiAwIFIvTWVkaWFCb3hbMCAwIDU5NSA4NDJdL0NvbnRlbnRzIDQgMCBSL1Jlc291cmNlczw8L0ZvbnQ8PC9GMSA1IDAgUj4+Pj4+CmVuZG9iago0IDAgb2JqCjw8L0xlbmd0aCA2MD4+CnN0cmVhbQpCVAovRjEgMjQgVGYKMTAwIDcwMCBUZAooS2VuZG9SZWFjdCBQREYgVmlld2VyIC0gUGh5c2ljYWwgSXRlbXMgUmVnaXN0ZXIpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE2IDAwMDAwIG4gCjAwMDAwMDAwNjIgMDAwMDAgbCAKMDAwMDAwMDExOSAwMDAwMCBuIAowMDAwMDAwMjQ5IDAwMDAwIG4gCjAwMDAwMDAzNTkgMDAwMDAgbCAKdHJhaWxlcgo8PC9TaXplIDYvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgo0MjAKJSVFT0Y=";
+
 // In-memory mock database populated with realistic physical item records
 let mockPhysicalItems: any[] = [
   {
@@ -20,6 +22,7 @@ let mockPhysicalItems: any[] = [
     nextDueDate: "2026-10-24",
     nextResponsiblePerson: "Rajvi Test",
     statusHistory: "Draft -> Pending -> Inspected",
+    documentPdf: SAMPLE_PDF_BASE64,
   },
   {
     id: "ITEM-002",

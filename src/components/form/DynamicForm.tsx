@@ -8,6 +8,7 @@ import { DropDownList } from "@progress/kendo-react-dropdowns";
 import { Stepper, Card, CardHeader, CardTitle, CardBody } from "@progress/kendo-react-layout";
 import { Notification } from "@progress/kendo-react-notification";
 import { Grid, GridColumn as Column } from "@progress/kendo-react-grid";
+import { Upload, UploadOnAddEvent } from "@progress/kendo-react-upload";
 
 interface DynamicFormProps {
   fields: FormField[];
@@ -334,6 +335,42 @@ export default function DynamicForm({
             rows={3}
             className={`w-full rounded-md border-slate-300 focus:border-green-500 focus:ring-green-500 ${hasError ? "k-state-invalid border-red-500" : ""}`}
           />
+        )}
+
+        {/* PDF/File Upload field */}
+        {f.type === "upload" && (
+          <div className="space-y-2">
+            {val && (
+              <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-2 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Existing PDF Document Attached
+                </span>
+                <span className="text-[10px] text-slate-400">Holds Base64 Data</span>
+              </div>
+            )}
+            <Upload
+              batch={false}
+              multiple={false}
+              autoUpload={false}
+              onAdd={(e: UploadOnAddEvent) => {
+                const fileObj = e.newState[0]?.getRawFile?.();
+                if (fileObj) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    if (reader.result) {
+                      const base64String = reader.result.toString().split(",")[1];
+                      handleChange(f.field, base64String);
+                    }
+                  };
+                  reader.readAsDataURL(fileObj);
+                }
+              }}
+              className={`w-full rounded-md ${hasError ? "border-red-500" : ""}`}
+            />
+          </div>
         )}
 
         {hasError && (
