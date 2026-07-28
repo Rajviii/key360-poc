@@ -158,7 +158,8 @@ export default function Dashboard() {
           let label = cat;
           // Format date string nicely if it is indeed a date
           if (cat.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            label = new Date(cat).toLocaleDateString(undefined, {
+            const [y, m, d] = cat.split("-").map(Number);
+            label = new Date(y, m - 1, d).toLocaleDateString(undefined, {
               month: "short",
               day: "numeric",
             });
@@ -325,7 +326,18 @@ export default function Dashboard() {
                         line={{ style: "smooth", width: 3 }}
                       />
                     </ChartSeries>
-                    <ChartTooltip render={(props: any) => `${props?.value?.toFixed(1)}`} />
+                    <ChartTooltip
+                      render={(e: any) => {
+                        const val = e?.value ?? e?.point?.value;
+                        const category = e?.category ?? e?.point?.category;
+                        if (val !== undefined && val !== null && !isNaN(Number(val))) {
+                          return category
+                            ? `${category}: ${Number(val).toFixed(1)} hrs`
+                            : `${Number(val).toFixed(1)} hrs`;
+                        }
+                        return "";
+                      }}
+                    />
                   </Chart>
                 </div>
               </div>
