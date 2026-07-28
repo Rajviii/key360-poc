@@ -13,6 +13,7 @@ import {
   GridToolbarAIAssistant,
   GridToolbarSpacer,
   handleAIResponse,
+  GridAIResponse,
 } from "@progress/kendo-react-grid";
 import type { GridToolbarAIAssistantHandle } from "@progress/kendo-react-grid";
 import { process, State } from "@progress/kendo-data-query";
@@ -20,6 +21,7 @@ import { Button } from "@progress/kendo-react-buttons";
 import { Popup } from "@progress/kendo-react-popup";
 import { CustomColumnMenu } from "./CustomColumnMenu";
 import { GridColumn } from "@/types/metadata";
+import { AIPromptOutputInterface } from "@progress/kendo-react-conversational-ui";
 
 // Premium Chart Integration imports
 import {
@@ -29,6 +31,8 @@ import {
   getWizardDataFromGridSelection,
 } from "@progress/kendo-react-chart-wizard";
 import { ContextMenu, MenuItem, MenuSelectEvent } from "@progress/kendo-react-layout";
+import { GridPDFExport, savePDF } from "@progress/kendo-react-pdf";
+import { Checkbox } from "@progress/kendo-react-inputs";
 import {
   tableBodyIcon,
   tableUnmergeIcon,
@@ -52,9 +56,14 @@ import {
   saveIcon,
   cancelIcon,
   hyperlinkOpenIcon,
+  filePdfIcon,
 } from "@progress/kendo-svg-icons";
 
-interface GenericGridProps {
+export interface GenericGridRef {
+  exportPDF: () => void;
+}
+
+export interface GenericGridProps {
   data: any[];
   columns: GridColumn[];
   searchQuery?: string;
@@ -64,6 +73,7 @@ interface GenericGridProps {
   dataItemKey?: string;
   onSave?: (id: any, item: any) => Promise<void>;
   onViewPdf?: (item: any) => void;
+  pdfFileName?: string;
   performance?: {
     virtualization?: boolean;
     pageSize?: number;
@@ -72,23 +82,29 @@ interface GenericGridProps {
   };
 }
 
-export default function GenericGrid({
-  data,
-  columns,
-  searchQuery = "",
-  onEdit,
-  onDelete,
-  onRowClick,
-  dataItemKey = "id",
-  onSave,
-  onViewPdf,
-  performance,
-}: GenericGridProps) {
+const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function GenericGrid(
+  {
+    data,
+    columns,
+    searchQuery = "",
+    onEdit,
+    onDelete,
+    onRowClick,
+    dataItemKey = "id",
+    onSave,
+    onViewPdf,
+    pdfFileName,
+    performance,
+  },
+  ref
+) {
   // Premium Chart Integration states & refs
   const gridRef = useRef<GridHandle>(null);
+  const pdfExportRef = useRef<GridPDFExport | null>(null);
   const columnsBtnRef = useRef<any>(null);
   const offset = useRef({ left: 0, top: 0 });
   const [mounted, setMounted] = useState(false);
+  const [repeatHeaders, setRepeatHeaders] = useState(true);
   React.useEffect(() => {
     setMounted(true);
   }, []);
@@ -295,8 +311,11 @@ export default function GenericGrid({
 
   const [showColumnChooser, setShowColumnChooser] = useState(false);
 
-  // AI Toolbar Assistant Ref & Helpers
+  // AI Toolbar Assistant Ref & States
   const gridToolbarAIAssistantRef = useRef<GridToolbarAIAssistantHandle>(null);
+  const [outputs, setOutputs] = useState<AIPromptOutputInterface[]>([]);
+  const [streaming, setStreaming] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const getColumnValues = useCallback((field: string) => {
     if (!data) return [];
@@ -316,6 +335,41 @@ export default function GenericGrid({
       };
     });
   }, [getColumnValues, gridColumns]);
+
+  const handleBeforeRequest = useCallback((event: any) => {
+    event.columns = addColumnsValues(event.columns);
+    setStreaming(true);
+    setLoading(true);
+  }, [addColumnsValues]);
+
+  const onResponseSuccess = useCallback((req: GridAIResponse<any>, promptMessage?: string, isRetry?: boolean) => {
+    setStreaming(false);
+    setLoading(false);
+    if (req && req.data) {
+      const result = handleAIResponse(req, gridState, gridRef.current);
+      if (result.state) {
+        setGridState(result.state);
+      }
+      const messages = result.messages || [];
+      const responseContentStart = ['Operation is successful. Data is: \n'];
+      const responseContentBody = messages
+        .map((output: string, idx: number) => `${idx + 1}. ${output}`)
+        .join('\n');
+
+      setOutputs((prev) => [
+        {
+          id: prev.length + 1,
+          title: 'Generate with AI',
+          subTitle: promptMessage,
+          prompt: promptMessage,
+          responseContent: responseContentStart.concat(responseContentBody.length > 0 ? responseContentBody : [req.data.message || 'Processed request.']).join(''),
+          isRetry: isRetry
+        },
+        ...prev
+      ]);
+    }
+    gridToolbarAIAssistantRef.current?.hide();
+  }, [gridState]);
 
   // Dynamic Suggestions for AI Assistant
   const suggestions = useMemo(() => {
@@ -354,6 +408,7 @@ export default function GenericGrid({
       filter: { logic: "and", filters: [] },
       group: [],
     });
+    setOutputs([]);
   }, []);
 
   const handleOpenReorder = (column: any) => {
@@ -403,6 +458,17 @@ export default function GenericGrid({
     // 2. Apply grid specific filtering, sorting, paging
     return process(filtered, gridState);
   }, [gridData, searchQuery, gridState]);
+
+  const exportPDF = useCallback(() => {
+    if (pdfExportRef.current) {
+      const dataToExport = processedData.data || gridData;
+      pdfExportRef.current.save(dataToExport);
+    }
+  }, [processedData, gridData]);
+
+  React.useImperativeHandle(ref, () => ({
+    exportPDF,
+  }), [exportPDF]);
 
   // Handle data state changes (sort, page, filter)
   const handleDataStateChange = (e: GridDataStateChangeEvent) => {
@@ -682,7 +748,8 @@ export default function GenericGrid({
       <Grid
         ref={gridRef}
         style={{ height: "500px" }}
-        data={processedData}
+        data={processedData.data}
+        total={processedData.total}
         dataItemKey={dataItemKey}
         edit={editState}
         editable={true}
@@ -727,24 +794,74 @@ export default function GenericGrid({
             <GridToolbarAIAssistant
               ref={gridToolbarAIAssistantRef}
               requestUrl="/api/ai/grid"
-              onPromptRequest={(event) => {
-                event.columns = addColumnsValues(event.columns);
-              }}
-              onResponseSuccess={(event) => {
-                const result = handleAIResponse(event, gridState, gridRef.current);
-                if (result.state) {
-                  setGridState(result.state);
-                }
-                gridToolbarAIAssistantRef.current?.hide();
-              }}
+              onPromptRequest={handleBeforeRequest}
+              onResponseSuccess={onResponseSuccess}
+              streaming={streaming}
+              loading={loading}
+              outputs={outputs}
               promptPlaceHolder="Filter, sort or group with AI"
               suggestionsList={suggestions}
-              enableSpeechToText={true}
+              enableSpeechToText={{
+                lang: "en-US",
+                interimResults: true,
+                continuous: false,
+                onResult: (event: any) => {
+                  if (event?.alternatives && event.alternatives.length > 0) {
+                    const transcript = event.alternatives[0].transcript;
+                    const textarea = document.querySelector<HTMLTextAreaElement>(
+                      ".k-grid-assistant-window textarea, .k-prompt-view textarea, .k-textarea textarea"
+                    );
+                    if (textarea) {
+                      // Update React textarea state in real time for both interim and final speech results
+                      const nativeSetter = Object.getOwnPropertyDescriptor(
+                        window.HTMLTextAreaElement.prototype,
+                        "value"
+                      )?.set;
+                      if (nativeSetter) {
+                        nativeSetter.call(textarea, transcript);
+                      } else {
+                        textarea.value = transcript;
+                      }
+                      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+                      textarea.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                  }
+                },
+                onError: (err: any) => {
+                  const errorMsg = err?.errorMessage || err?.error || String(err);
+                  console.warn("Speech recognition error:", errorMsg);
+                  if (errorMsg === "aborted") {
+                    console.info(
+                      "Speech recognition aborted. Common causes: another app/extension (e.g. screen recorder) is capturing the microphone, or running over HTTP instead of HTTPS."
+                    );
+                  } else if (errorMsg === "network") {
+                    alert("Speech recognition network error: Chrome Web Speech API requires internet connectivity to Google speech servers.");
+                  }
+                },
+              }}
             />
           )}
           <GridToolbarSpacer />
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+              <Checkbox
+                id="repeatHeaders"
+                checked={repeatHeaders}
+                onChange={() => setRepeatHeaders(!repeatHeaders)}
+                label="Repeat headers"
+              />
+            </div>
+
+            <Button
+              svgIcon={filePdfIcon}
+              title="Export Grid to PDF"
+              onClick={exportPDF}
+              className="flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer"
+            >
+              Export PDF
+            </Button>
+
             <Button
               ref={columnsBtnRef}
               onClick={() => setShowColumnChooser((prev) => !prev)}
@@ -1040,6 +1157,30 @@ export default function GenericGrid({
           defaultState={chartWizardDefaultState}
         />
       )}
+
+      <GridPDFExport
+        ref={pdfExportRef}
+        margin="1.5cm"
+        paperSize="A4"
+        scale={0.7}
+        repeatHeaders={repeatHeaders}
+        fileName={pdfFileName || "key360_grid_export.pdf"}
+      >
+        <Grid data={processedData.data || gridData}>
+          {gridColumns
+            .filter((col) => visibleFields[col.field])
+            .map((col) => (
+              <Column
+                key={col.field}
+                field={col.field}
+                title={col.title}
+                width={col.width}
+              />
+            ))}
+        </Grid>
+      </GridPDFExport>
     </div>
   );
-}
+});
+
+export default GenericGrid;

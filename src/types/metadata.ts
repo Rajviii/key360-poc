@@ -27,7 +27,7 @@ export interface ToolbarButton {
   label: string;
   icon?: string;
   themeColor?: "primary" | "secondary" | "tertiary" | "info" | "success" | "warning" | "error" | "none";
-  actionType: "add" | "refresh" | "delete" | "export" | "custom";
+  actionType: "add" | "refresh" | "delete" | "export" | "exportPdf" | "custom";
 }
 
 export type ModuleViewType = "grid" | "gantt" | "dashboard" | "calendar";

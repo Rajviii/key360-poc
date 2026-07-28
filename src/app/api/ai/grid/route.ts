@@ -98,11 +98,11 @@ export async function POST(request: Request) {
     ) {
       const dir =
         text.includes("desc") ||
-        text.includes("down") ||
-        text.includes("reverse") ||
-        text.includes("z to a") ||
-        text.includes("highest") ||
-        text.includes("newest")
+          text.includes("down") ||
+          text.includes("reverse") ||
+          text.includes("z to a") ||
+          text.includes("highest") ||
+          text.includes("newest")
           ? "desc"
           : "asc";
       let col = findColumn(text);
@@ -201,13 +201,19 @@ export async function POST(request: Request) {
             filterMatched = true;
           }
         } else if (prompt.trim()) {
-          // General search term filter against all text columns
-          const textCols = columns.filter((c: any) => c.type === "text" || !c.type || c.field === "employeeName" || c.field === "name" || c.field === "taskDescription" || c.field === "commodity");
-          if (textCols.length > 0) {
+          // Extract actual search term by cleaning natural language filler words
+          const searchTerm = prompt
+            .replace(/\b(filter|where|only|the|records|data|show|list|find|entries|matching|equal|equals|contains|by|is|for)\b/gi, "")
+            .trim();
+
+          const targetValue = searchTerm || prompt.trim();
+
+          const textCols = columns.filter((c: any) => c.field !== "actions");
+          if (textCols.length > 0 && targetValue) {
             const filterRules = textCols.map((c: any) => ({
               field: c.field,
               operator: "contains",
-              value: prompt.trim()
+              value: targetValue
             }));
             commands.push({
               type: "GridFilter",
@@ -215,9 +221,9 @@ export async function POST(request: Request) {
                 logic: "or",
                 filters: filterRules
               },
-              message: `Filtered across columns for "${prompt}".`
+              message: `Filtered across columns matching "${targetValue}".`
             });
-            message = `Filtered across columns for "${prompt}".`;
+            message = `Filtered across columns matching "${targetValue}".`;
             filterMatched = true;
           }
         }

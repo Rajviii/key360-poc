@@ -9,6 +9,7 @@ import {
     arrowRotateCwIcon,
     trashIcon,
     fileExcelIcon,
+    filePdfIcon,
     searchIcon,
 } from "@progress/kendo-svg-icons";
 
@@ -23,6 +24,8 @@ const getIcon = (actionType: string) => {
             return trashIcon;
         case "export":
             return fileExcelIcon;
+        case "exportPdf":
+            return filePdfIcon;
         default:
             return undefined;
     }

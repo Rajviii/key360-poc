@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import ContentLayout from "@/components/layout/ContentLayout";
 import ModuleToolbar from "@/components/toolbar/ModuleToolbar";
-import GenericGrid from "@/components/grid/GenericGrid";
+import GenericGrid, { GenericGridRef } from "@/components/grid/GenericGrid";
 import GenericGantt from "@/components/grid/GenericGantt";
 import FormDialog from "@/components/dialogs/FormDialog";
 import DynamicForm from "@/components/form/DynamicForm";
@@ -72,6 +72,8 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
     });
   }, [config.toolbarButtons, permissions]);
 
+  const gridPdfRef = React.useRef<GenericGridRef>(null);
+
   // Handle actions triggered from the Toolbar
   const handleToolbarAction = async (actionType: string) => {
     if (actionType === "add") {
@@ -92,6 +94,10 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
       }
     } else if (actionType === "export") {
       handleExport();
+    } else if (actionType === "exportPdf") {
+      if (gridPdfRef.current) {
+        gridPdfRef.current.exportPDF();
+      }
     }
   };
 
@@ -401,6 +407,8 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
               />
             ) : (
               <GenericGrid
+                ref={gridPdfRef}
+                pdfFileName={`key360_${config.id}_export.pdf`}
                 data={data}
                 columns={config.gridColumns}
                 performance={config.performance}

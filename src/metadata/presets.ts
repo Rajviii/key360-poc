@@ -157,6 +157,7 @@ export const ToolbarPresets = {
   refresh: { id: "refresh", label: "Refresh", themeColor: "none", actionType: "refresh" },
   delete: { id: "delete", label: "Delete", themeColor: "error", actionType: "delete" },
   export: { id: "export", label: "Export to Excel", themeColor: "success", actionType: "export" },
+  exportPdf: { id: "exportPdf", label: "Export PDF", themeColor: "tertiary", actionType: "exportPdf" },
 };
 
 export const GanttPresets = {
@@ -198,17 +199,17 @@ export const ModuleTemplates = {
   base: {
     views: ["grid"],
     permissions: "read-write",
-    toolbar: ["refresh"],
+    toolbar: ["refresh", "exportPdf"],
   },
   crud: {
     views: ["grid"],
     permissions: "read-write",
-    toolbar: ["add", "refresh", "delete", "export"],
+    toolbar: ["add", "refresh", "delete", "export", "exportPdf"],
   },
   approval: {
     views: ["grid", "dashboard"],
     permissions: "read-write",
-    toolbar: ["add", "refresh", "delete", "export"],
+    toolbar: ["add", "refresh", "delete", "export", "exportPdf"],
     formLayout: "split-cards",
     formSections: [
       {
