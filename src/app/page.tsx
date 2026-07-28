@@ -69,8 +69,8 @@ export default function Dashboard() {
         return flat;
       };
 
-      const isGantt = mod.views.includes("gantt") && mod.defaultView === "gantt";
-      const targetList = isGantt ? getFlatData(data.tasks || []) : data;
+      const isTreeData = Array.isArray(data?.tasks);
+      const targetList = isTreeData ? getFlatData(data.tasks) : data;
 
       const evaluateFilter = (item: any, filter?: any): boolean => {
         if (!filter) return true;

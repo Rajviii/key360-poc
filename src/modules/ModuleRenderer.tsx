@@ -25,10 +25,18 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
+  // Active view state (e.g., 'grid' vs 'gantt')
+  const [activeView, setActiveView] = useState<string>(config.defaultView || config.views?.[0] || "grid");
+
   // Modal dialog states
   const [dialogMode, setDialogMode] = useState<"none" | "add" | "edit">("none");
   const [activePdfItem, setActivePdfItem] = useState<any | null>(null);
   const [loadMetrics, setLoadMetrics] = useState<{ loadTimeMs: number; cacheHit: boolean }>({ loadTimeMs: 0, cacheHit: false });
+
+  // Reset activeView if module config changes
+  useEffect(() => {
+    setActiveView(config.defaultView || config.views?.[0] || "grid");
+  }, [config.id, config.defaultView]);
 
   // Load module data from generic service
   const fetchData = async () => {
@@ -40,7 +48,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
       const isHit = duration < 120;
       setLoadMetrics({ loadTimeMs: duration, cacheHit: isHit });
 
-      if (config.views.includes("gantt") && config.defaultView === "gantt") {
+      if (response && typeof response === "object" && "tasks" in response) {
         setData(response.tasks || []);
         setDependencies(response.dependencies || []);
       } else {
@@ -175,6 +183,25 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
     }
   };
 
+  // Helper function to flatten hierarchical tree data (for Grid View & CSV export)
+  const getFlatRows = (nodes: any[]): any[] => {
+    if (!Array.isArray(nodes)) return [];
+    let flat: any[] = [];
+    nodes.forEach((node) => {
+      flat.push(node);
+      if (node.children && node.children.length > 0) {
+        flat = flat.concat(getFlatRows(node.children));
+      }
+    });
+    return flat;
+  };
+
+  // Compute flattened dataset for Grid View when data has tree structure
+  const gridData = React.useMemo(() => {
+    const hasTreeData = data.some((item) => item && item.children && item.children.length > 0);
+    return hasTreeData ? getFlatRows(data) : data;
+  }, [data]);
+
   // Export grid data to CSV file format
   const handleExport = () => {
     if (data.length === 0) {
@@ -184,20 +211,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
 
     const fields = config.gridColumns.map(c => c.field);
     const headers = config.gridColumns.map(c => c.title);
-
-    const getFlatRows = (nodes: any[]): any[] => {
-      let flat: any[] = [];
-      nodes.forEach((node) => {
-        flat.push(node);
-        if (node.children && node.children.length > 0) {
-          flat = flat.concat(getFlatRows(node.children));
-        }
-      });
-      return flat;
-    };
-
-    const isGantt = config.views.includes("gantt") && config.defaultView === "gantt";
-    const rowsToExport = isGantt ? getFlatRows(data) : data;
+    const rowsToExport = gridData;
 
     const csvContent =
       "data:text/csv;charset=utf-8,\uFEFF" +
@@ -229,20 +243,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
   // Dynamic Module KPIs using resolved config specifications
   const stats = React.useMemo(() => {
     if (!data || data.length === 0 || !config.kpis) return null;
-
-    const getFlatData = (list: any[]): any[] => {
-      let flat: any[] = [];
-      list.forEach((item) => {
-        flat.push(item);
-        if (item.children && item.children.length > 0) {
-          flat = flat.concat(getFlatData(item.children));
-        }
-      });
-      return flat;
-    };
-
-    const isGantt = config.views.includes("gantt") && config.defaultView === "gantt";
-    const flatData = isGantt ? getFlatData(data) : data;
+    const flatData = gridData;
 
     const evaluateFilter = (item: any, filter?: any): boolean => {
       if (!filter) return true;
@@ -379,6 +380,9 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             selectedCount={selectedItem ? 1 : 0}
+            availableViews={config.views}
+            activeView={activeView}
+            onViewChange={setActiveView}
           />
 
           {/* Table Grid / Gantt Chart / Loading Overlay */}
@@ -394,7 +398,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
               </div>
             )}
 
-            {config.views.includes("gantt") && config.defaultView === "gantt" ? (
+            {activeView === "gantt" ? (
               <GenericGantt
                 data={data}
                 dependencies={dependencies}
@@ -409,7 +413,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
               <GenericGrid
                 ref={gridPdfRef}
                 pdfFileName={`key360_${config.id}_export.pdf`}
-                data={data}
+                data={gridData}
                 columns={config.gridColumns}
                 performance={config.performance}
                 searchQuery={searchQuery}
