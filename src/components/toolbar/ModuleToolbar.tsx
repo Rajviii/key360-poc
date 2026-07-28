@@ -93,9 +93,8 @@ export default function ModuleToolbar({
                                 onClick={() => onAction(btn.actionType)}
                                 disabled={isDisabled}
                                 themeColor={isPrimary ? "primary" : undefined}
-                                className={`font-semibold text-xs transition-all duration-200 cursor-pointer ${
-                                    isPrimary ? "px-3 py-1.5" : "p-2"
-                                }`}
+                                className={`font-semibold text-xs transition-all duration-200 cursor-pointer ${isPrimary ? "px-3 py-1.5" : "p-2"
+                                    }`}
                             >
                                 {isPrimary && <span className="ml-1">{btn.label}</span>}
                                 {btn.actionType === "delete" && selectedCount > 0 && (
