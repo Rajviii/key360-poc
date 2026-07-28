@@ -74,6 +74,7 @@ export interface GenericGridProps {
   onSave?: (id: any, item: any) => Promise<void>;
   onViewPdf?: (item: any) => void;
   pdfFileName?: string;
+  repeatHeaders?: boolean;
   performance?: {
     virtualization?: boolean;
     pageSize?: number;
@@ -94,6 +95,7 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
     onSave,
     onViewPdf,
     pdfFileName,
+    repeatHeaders = true,
     performance,
   },
   ref
@@ -104,7 +106,6 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
   const columnsBtnRef = useRef<any>(null);
   const offset = useRef({ left: 0, top: 0 });
   const [mounted, setMounted] = useState(false);
-  const [repeatHeaders, setRepeatHeaders] = useState(true);
   React.useEffect(() => {
     setMounted(true);
   }, []);
@@ -864,26 +865,10 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
           <GridToolbarSpacer />
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
-              <Checkbox
-                id="repeatHeaders"
-                checked={repeatHeaders}
-                onChange={() => setRepeatHeaders(!repeatHeaders)}
-                label="Repeat headers"
-              />
-            </div>
-
-            <Button
-              svgIcon={filePdfIcon}
-              title="Export Grid to PDF"
-              onClick={exportPDF}
-              className="flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 cursor-pointer"
-            >
-              Export PDF
-            </Button>
-
             <Button
               ref={columnsBtnRef}
+              svgIcon={gridIcon}
+              title="Manage Column Visibility"
               onClick={() => setShowColumnChooser((prev) => !prev)}
               className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
             >
@@ -892,11 +877,11 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
 
             <Button
               svgIcon={arrowRotateCcwIcon}
-              title="Reset changes"
+              title="Reset Filters, Sort & Layout"
               onClick={handleReset}
               className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
             >
-              Reset changes
+              Reset
             </Button>
           </div>
         </GridToolbar>

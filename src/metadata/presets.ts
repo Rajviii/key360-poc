@@ -230,7 +230,7 @@ export const ModuleTemplates = {
   gantt: {
     views: ["gantt", "grid"],
     permissions: "read-write",
-    toolbar: ["add", "refresh"],
+    toolbar: ["add", "refresh", "delete", "export", "exportPdf"],
     ganttConfig: GanttPresets,
   }
 };

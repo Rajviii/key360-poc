@@ -32,6 +32,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
   const [dialogMode, setDialogMode] = useState<"none" | "add" | "edit">("none");
   const [activePdfItem, setActivePdfItem] = useState<any | null>(null);
   const [loadMetrics, setLoadMetrics] = useState<{ loadTimeMs: number; cacheHit: boolean }>({ loadTimeMs: 0, cacheHit: false });
+  const [repeatHeaders, setRepeatHeaders] = useState(true);
 
   // Reset activeView if module config changes
   useEffect(() => {
@@ -383,6 +384,8 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
             availableViews={config.views}
             activeView={activeView}
             onViewChange={setActiveView}
+            repeatHeaders={repeatHeaders}
+            onRepeatHeadersChange={setRepeatHeaders}
           />
 
           {/* Table Grid / Gantt Chart / Loading Overlay */}
@@ -417,6 +420,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
                 columns={config.gridColumns}
                 performance={config.performance}
                 searchQuery={searchQuery}
+                repeatHeaders={repeatHeaders}
                 onEdit={handleEditInitiate}
                 onDelete={handleDelete}
                 onRowClick={(item) => setSelectedItem(item.id === selectedItem?.id ? null : item)}

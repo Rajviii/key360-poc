@@ -32,6 +32,8 @@ const getIcon = (actionType: string) => {
     }
 };
 
+import { Checkbox } from "@progress/kendo-react-inputs";
+
 interface ModuleToolbarProps {
     buttons: ToolbarButton[];
     onAction: (actionType: string) => void;
@@ -41,7 +43,26 @@ interface ModuleToolbarProps {
     availableViews?: string[];
     activeView?: string;
     onViewChange?: (view: string) => void;
+    repeatHeaders?: boolean;
+    onRepeatHeadersChange?: (val: boolean) => void;
 }
+
+const getTooltip = (actionType: string, label: string) => {
+    switch (actionType) {
+        case "add":
+            return "Add new record";
+        case "refresh":
+            return "Refresh table data";
+        case "delete":
+            return "Delete selected record(s)";
+        case "export":
+            return "Export data to Excel";
+        case "exportPdf":
+            return "Export grid report to PDF";
+        default:
+            return label;
+    }
+};
 
 export default function ModuleToolbar({
     buttons,
@@ -52,44 +73,68 @@ export default function ModuleToolbar({
     availableViews,
     activeView = "grid",
     onViewChange,
+    repeatHeaders = true,
+    onRepeatHeadersChange,
 }: ModuleToolbarProps) {
     return (
-        <div className="bg-white rounded-xl border border-slate-200 px-5 py-4 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3">
             {/* Dynamic Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 {buttons.map((btn) => {
-                    // Disable delete button if no rows are selected/processed or handle action accordingly
                     const isDisabled = btn.actionType === "delete" && selectedCount === 0;
+                    const tooltip = getTooltip(btn.actionType, btn.label);
+                    const isPrimary = btn.actionType === "add";
 
                     return (
-                        <Button
-                            key={btn.id}
-                            svgIcon={getIcon(btn.actionType)}
-                            onClick={() => onAction(btn.actionType)}
-                            disabled={isDisabled}
-                            className="font-semibold text-sm transition-all duration-200 cursor-pointer"
-                        >
-                            {btn.label}
-                            {btn.actionType === "delete" && selectedCount > 0 && ` (${selectedCount})`}
-                        </Button>
+                        <React.Fragment key={btn.id}>
+                            <Button
+                                svgIcon={getIcon(btn.actionType)}
+                                title={tooltip}
+                                onClick={() => onAction(btn.actionType)}
+                                disabled={isDisabled}
+                                themeColor={isPrimary ? "primary" : undefined}
+                                className={`font-semibold text-xs transition-all duration-200 cursor-pointer ${
+                                    isPrimary ? "px-3 py-1.5" : "p-2"
+                                }`}
+                            >
+                                {isPrimary && <span className="ml-1">{btn.label}</span>}
+                                {btn.actionType === "delete" && selectedCount > 0 && (
+                                    <span className="ml-1 text-xs font-bold bg-red-600 text-white px-1.5 py-0.5 rounded-full">
+                                        {selectedCount}
+                                    </span>
+                                )}
+                            </Button>
+
+                            {btn.actionType === "exportPdf" && onRepeatHeadersChange && (
+                                <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs" title="Repeat column headers on exported PDF pages">
+                                    <Checkbox
+                                        id="toolbarRepeatHeaders"
+                                        checked={repeatHeaders}
+                                        onChange={() => onRepeatHeadersChange(!repeatHeaders)}
+                                        label="Repeat headers"
+                                    />
+                                </div>
+                            )}
+                        </React.Fragment>
                     );
                 })}
             </div>
 
             {/* View Switcher Toggle & Search Bar */}
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                 {availableViews && availableViews.length > 1 && onViewChange && (
-                    <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
+                    <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                         <Button
                             type="button"
                             size="small"
                             fillMode={activeView === "grid" ? "solid" : "flat"}
                             themeColor={activeView === "grid" ? "primary" : "base"}
                             svgIcon={gridIcon}
+                            title="Grid View"
                             onClick={() => onViewChange("grid")}
-                            className="font-medium text-xs rounded-md cursor-pointer"
+                            className="font-medium text-xs rounded-md cursor-pointer px-2.5 py-1"
                         >
-                            Grid View
+                            <span className="hidden sm:inline ml-1">Grid</span>
                         </Button>
                         <Button
                             type="button"
@@ -97,10 +142,11 @@ export default function ModuleToolbar({
                             fillMode={activeView === "gantt" ? "solid" : "flat"}
                             themeColor={activeView === "gantt" ? "primary" : "base"}
                             svgIcon={chartLineIcon}
+                            title="Gantt View"
                             onClick={() => onViewChange("gantt")}
-                            className="font-medium text-xs rounded-md cursor-pointer"
+                            className="font-medium text-xs rounded-md cursor-pointer px-2.5 py-1"
                         >
-                            Gantt View
+                            <span className="hidden sm:inline ml-1">Gantt</span>
                         </Button>
                     </div>
                 )}
