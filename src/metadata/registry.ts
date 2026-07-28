@@ -82,7 +82,42 @@ class ModuleRegistryClass {
   }
 
   getModule(id: string): ModuleConfig | undefined {
-    return this.modules.get(id);
+    if (!id) return undefined;
+    // 1. Direct match
+    if (this.modules.has(id)) return this.modules.get(id);
+
+    // 2. Normalize and check variations (e.g. "timesheet" vs "timesheets", "physical-items" vs "physicalItems")
+    const cleanId = id.toLowerCase().replace(/[-_]/g, "");
+    for (const [key, mod] of this.modules.entries()) {
+      const cleanKey = key.toLowerCase().replace(/[-_]/g, "");
+      if (
+        cleanKey === cleanId ||
+        cleanKey === cleanId + "s" ||
+        cleanKey + "s" === cleanId
+      ) {
+        return mod;
+      }
+    }
+
+    // 3. Fallback: Auto-generate dynamic metadata module config for unregistered modules (e.g. "clients", "invoices")
+    const title = id
+      .split(/[-_]/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
+    const dynamicConfig = resolveModuleConfig({
+      id,
+      extends: "base",
+      title,
+      breadcrumbs: ["Modules", title],
+      endpoint: `/api/${id}`,
+      columnRefs: ["id", "title", "name", "email", "status", "date"],
+      fieldRefs: ["title", "name", "email", "status"],
+    });
+
+    // Cache dynamic config in registry
+    this.modules.set(id, dynamicConfig);
+    return dynamicConfig;
   }
 
   getAllModules(): ModuleConfig[] {

@@ -4,6 +4,8 @@ import React, { useMemo, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { PanelBar, PanelBarItem } from "@progress/kendo-react-layout";
 
+import { ModuleRegistry } from "@/metadata/registry";
+
 interface SidebarProps {
     expanded?: boolean;
 }
@@ -150,55 +152,68 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
         "Reports": true,
     });
 
-    // Categories list matching user's layout structure
-    const categoriesList: SidebarCategory[] = useMemo(() => [
-        {
-            name: "Favorites",
-            icon: groupIcons["Favorites"],
-            items: [
-                { title: "Timesheets", route: "/timesheet", isFavorite: true },
-                // { title: "Projects", route: "#", disabled: true },
-                // { title: "Assets", route: "#", disabled: true }
-            ]
-        },
-        {
-            name: "Human Resources",
-            icon: groupIcons["Human Resources"],
-            items: [
-                { title: "Timesheets", route: "/timesheet" },
-                { title: "Employees", route: "/employees" },
-                { title: "Leave Management", route: "#", disabled: true },
-                { title: "Approvals", route: "#", disabled: true }
-            ]
-        },
-        {
-            name: "Project Management",
-            icon: groupIcons["Project Management"],
-            items: [
-                { title: "Projects", route: "#", disabled: true },
-                { title: "Project Planning (Gantt)", route: "/project-planning" },
-                { title: "Tasks", route: "#", disabled: true }
-            ]
-        },
-        {
-            name: "Operations",
-            icon: groupIcons["Operations"],
-            items: [
-                { title: "Assets", route: "#", disabled: true },
-                { title: "Work Orders", route: "#", disabled: true },
-                { title: "Vendors", route: "#", disabled: true },
-                { title: "Physical Items Register", route: "/physical-items" }
-            ]
-        },
-        {
-            name: "Reports",
-            icon: groupIcons["Reports"],
-            items: [
-                { title: "Reports", route: "#", disabled: true },
-                { title: "Analytics", route: "#", disabled: true }
-            ]
-        }
-    ], []);
+    // Categories list dynamically matched against registered modules
+    const categoriesList: SidebarCategory[] = useMemo(() => {
+        const getModuleRoute = (id: string, defaultRoute = "#"): { route: string; disabled: boolean } => {
+            const mod = ModuleRegistry.getModule(id);
+            if (mod) {
+                const route = ModuleRegistry.getRoute(id);
+                return { route: route && route !== "#" ? route : `/${id}`, disabled: false };
+            }
+            return { route: defaultRoute, disabled: defaultRoute === "#" };
+        };
+
+        const assetsMeta = getModuleRoute("assets");
+        const workOrdersMeta = getModuleRoute("work-orders");
+        const vendorsMeta = getModuleRoute("vendors");
+
+        return [
+            {
+                name: "Favorites",
+                icon: groupIcons["Favorites"],
+                items: [
+                    { title: "Timesheets", route: "/timesheet", isFavorite: true },
+                ]
+            },
+            {
+                name: "Human Resources",
+                icon: groupIcons["Human Resources"],
+                items: [
+                    { title: "Timesheets", route: "/timesheet" },
+                    { title: "Employees", route: "/employees" },
+                    { title: "Leave Management", route: "#", disabled: true },
+                    { title: "Approvals", route: "#", disabled: true }
+                ]
+            },
+            {
+                name: "Project Management",
+                icon: groupIcons["Project Management"],
+                items: [
+                    { title: "Projects", route: "#", disabled: true },
+                    { title: "Project Planning (Gantt)", route: "/project-planning" },
+                    { title: "Tasks", route: "#", disabled: true }
+                ]
+            },
+            {
+                name: "Operations",
+                icon: groupIcons["Operations"],
+                items: [
+                    { title: "Assets", route: assetsMeta.route, disabled: assetsMeta.disabled },
+                    { title: "Work Orders", route: workOrdersMeta.route, disabled: workOrdersMeta.disabled },
+                    { title: "Vendors", route: vendorsMeta.route, disabled: vendorsMeta.disabled },
+                    { title: "Physical Items Register", route: "/physical-items" }
+                ]
+            },
+            {
+                name: "Reports",
+                icon: groupIcons["Reports"],
+                items: [
+                    { title: "Reports", route: "#", disabled: true },
+                    { title: "Analytics", route: "#", disabled: true }
+                ]
+            }
+        ];
+    }, []);
 
     // Initialize expanded states once based on active URL route matches
     useEffect(() => {
