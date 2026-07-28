@@ -9,6 +9,43 @@ import { Stepper, Card, CardHeader, CardTitle, CardBody } from "@progress/kendo-
 import { Notification } from "@progress/kendo-react-notification";
 import { Grid, GridColumn as Column } from "@progress/kendo-react-grid";
 import { Upload, UploadOnAddEvent } from "@progress/kendo-react-upload";
+import { Editor, EditorTools } from "@progress/kendo-react-editor";
+
+const {
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Subscript,
+  Superscript,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Indent,
+  Outdent,
+  OrderedList,
+  UnorderedList,
+  Undo,
+  Redo,
+  FontSize,
+  FontName,
+  FormatBlock,
+  Link,
+  Unlink,
+  InsertImage,
+  ViewHtml,
+  InsertTable,
+  AddRowBefore,
+  AddRowAfter,
+  AddColumnBefore,
+  AddColumnAfter,
+  DeleteRow,
+  DeleteColumn,
+  DeleteTable,
+  MergeCells,
+  SplitCell,
+} = EditorTools;
 
 interface DynamicFormProps {
   fields: FormField[];
@@ -273,7 +310,7 @@ export default function DynamicForm({
     return (
       <div
         key={f.field}
-        className={`flex flex-col gap-1.5 ${f.type === "textarea" ? "md:col-span-2" : ""}`}
+        className={`flex flex-col gap-1.5 ${f.type === "textarea" || f.type === "editor" || f.type === "richtext" || f.type === "upload" ? "md:col-span-2" : ""}`}
       >
         <label className="text-xs font-bold text-slate-600">
           {f.label} {f.required && <span className="text-red-500">*</span>}
@@ -335,6 +372,35 @@ export default function DynamicForm({
             rows={3}
             className={`w-full rounded-md border-slate-300 focus:border-green-500 focus:ring-green-500 ${hasError ? "k-state-invalid border-red-500" : ""}`}
           />
+        )}
+
+        {/* Kendo Rich Text Editor */}
+        {(f.type === "editor" || f.type === "richtext") && (
+          <div className="w-full">
+            <Editor
+              tools={[
+                [Bold, Italic, Underline, Strikethrough],
+                [Subscript, Superscript],
+                [AlignLeft, AlignCenter, AlignRight, AlignJustify],
+                [Indent, Outdent],
+                [OrderedList, UnorderedList],
+                FontSize,
+                FontName,
+                FormatBlock,
+                [Undo, Redo],
+                [Link, Unlink, InsertImage, ViewHtml],
+                [InsertTable],
+                [AddRowBefore, AddRowAfter, AddColumnBefore, AddColumnAfter],
+                [DeleteRow, DeleteColumn, DeleteTable],
+                [MergeCells, SplitCell],
+              ]}
+              contentStyle={{ height: 260 }}
+              defaultContent={val || ""}
+              value={val || ""}
+              onChange={(e) => handleChange(f.field, e.html)}
+              className={`w-full rounded-md border-slate-300 ${hasError ? "k-state-invalid border-red-500" : ""}`}
+            />
+          </div>
         )}
 
         {/* PDF/File Upload field */}

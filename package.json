@@ -19,6 +19,7 @@
     "@progress/kendo-react-common": "^15.1.0",
     "@progress/kendo-react-dateinputs": "^15.1.0",
     "@progress/kendo-react-dropdowns": "^15.1.0",
+    "@progress/kendo-react-editor": "^15.1.0",
     "@progress/kendo-react-excel-export": "^15.1.0",
     "@progress/kendo-react-gantt": "^15.1.0",
     "@progress/kendo-react-grid": "^15.1.0",

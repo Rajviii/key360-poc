@@ -657,6 +657,26 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
     );
   };
 
+  // Rich Text / Editor Cell Renderer
+  const EditorCell = (props: any) => {
+    if (props.dataItem.inEdit) {
+      return (
+        <td {...props.tdProps} className={`px-6 py-4 text-sm ${props.tdProps?.className || ""}`}>
+          {props.children}
+        </td>
+      );
+    }
+
+    const rawHtml = props.dataItem[props.field] || "";
+    const plainText = String(rawHtml).replace(/<[^>]+>/g, "").trim();
+
+    return (
+      <td {...props.tdProps} className={`px-6 py-4 text-sm text-slate-700 max-w-xs truncate ${props.tdProps?.className || ""}`} title={plainText}>
+        {plainText || <span className="text-slate-400 text-xs italic">No content</span>}
+      </td>
+    );
+  };
+
   // Custom Eye Icon SVG for view PDF button
   const eyeIconCustom = (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -896,6 +916,8 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
               editorType = "numeric";
             } else if (col.type === "pdf") {
               cellRenderer = PdfCell;
+            } else if (col.type === "editor" || col.type === "richtext") {
+              cellRenderer = EditorCell;
             }
 
             return (

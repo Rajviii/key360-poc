@@ -1,4 +1,4 @@
-export type FieldType = "text" | "number" | "date" | "textarea" | "select" | "upload";
+export type FieldType = "text" | "number" | "date" | "textarea" | "select" | "upload" | "editor" | "richtext";
 
 export interface FormField {
   field: string;
@@ -19,7 +19,7 @@ export interface GridColumn {
   resizable?: boolean;
   reorderable?: boolean;
   format?: string; // date formats or currency formats
-  type?: "text" | "number" | "date" | "badge" | "actions" | "pdf";
+  type?: "text" | "number" | "date" | "badge" | "actions" | "pdf" | "editor" | "richtext";
 }
 
 export interface ToolbarButton {

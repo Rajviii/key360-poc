@@ -5,7 +5,7 @@ export const ColumnPresets = {
   projectCode: { field: "projectCode", title: "Project", width: 140, type: "text", filter: "text" },
   hours: { field: "hours", title: "Hours Worked", width: 140, type: "number", filter: "numeric" },
   status: { field: "status", title: "Approval Status", width: 160, type: "badge", filter: "text" },
-  taskDescription: { field: "taskDescription", title: "Task Description", type: "text", filter: "text" },
+  taskDescription: { field: "taskDescription", title: "Task Description", type: "editor", filter: "text" },
   comments: { field: "comments", title: "Manager Comments", type: "text", filter: "text" },
   title: { field: "title", title: "Task Title", width: 220, type: "text", filter: "text" },
   start: { field: "start", title: "Start Date", width: 130, type: "date", filter: "date" },
@@ -71,7 +71,7 @@ export const FormPresets = {
     ],
     defaultValue: "Draft",
   },
-  taskDescription: { field: "taskDescription", label: "Activity Description", type: "textarea", required: true, placeholder: "Describe the tasks completed..." },
+  taskDescription: { field: "taskDescription", label: "Activity Description", type: "editor", required: true, placeholder: "Describe the tasks completed..." },
   comments: { field: "comments", label: "Manager Notes / Comments", type: "textarea", required: false, placeholder: "Optional notes..." },
   title: { field: "title", label: "Task Name", type: "text", required: true, placeholder: "Enter task name" },
   parentId: {
