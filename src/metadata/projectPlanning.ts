@@ -31,7 +31,7 @@ export const initialProjectTasks = [
         id: 2,
         title: "Requirements",
         parentId: 1,
-        start: new Date("2026-07-01T08:00:00.000Z"),
+        start: new Date("2026-07-02T08:00:00.000Z"),
         end: new Date("2026-07-05T17:00:00.000Z"),
         percentComplete: 1.0,
       },

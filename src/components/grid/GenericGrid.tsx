@@ -830,9 +830,9 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
 
     return (
       <td className="px-6 py-3 text-right text-sm font-medium space-x-2 actions-cell">
-        {hasPdfField && onViewPdf && (
+        {onViewPdf && (
           <Button
-            title="View Attached PDF Document"
+            title="View Attached Document / Sign PDF"
             onClick={(e) => {
               e.stopPropagation();
               onViewPdf(item);
@@ -843,16 +843,16 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
           </Button>
         )}
         <Button
-          svgIcon={hyperlinkOpenIcon}
+          svgIcon={pencilIcon}
           title="Edit Record (Popup)"
           onClick={(e) => {
             e.stopPropagation();
             onEdit(item);
           }}
-          className="p-1.5 hover:bg-green-50 rounded text-green-600 hover:text-green-800 border-none bg-transparent cursor-pointer"
+          className="p-1.5 hover:bg-emerald-50 rounded text-emerald-600 hover:text-emerald-800 border-none bg-transparent cursor-pointer"
         />
         <Button
-          svgIcon={pencilIcon}
+          svgIcon={hyperlinkOpenIcon}
           title="Quick Edit (Inline)"
           onClick={(e) => {
             e.stopPropagation();

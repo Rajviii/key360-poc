@@ -79,10 +79,12 @@ export default function DynamicForm({
   useEffect(() => {
     const defaultData: Record<string, any> = {};
     fields.forEach((f) => {
+      const fieldKey = f.field || (f as any).name || (f as any).id;
+      if (!fieldKey) return;
       // Prioritize: 1. initial value, 2. default metadata value, 3. empty fallback
-      defaultData[f.field] =
-        memoizedInitialValues[f.field] !== undefined
-          ? memoizedInitialValues[f.field]
+      defaultData[fieldKey] =
+        memoizedInitialValues[fieldKey] !== undefined
+          ? memoizedInitialValues[fieldKey]
           : f.defaultValue !== undefined
             ? f.defaultValue
             : "";
@@ -113,8 +115,10 @@ export default function DynamicForm({
 
     const newErrors: Record<string, string> = {};
     fields.forEach((f) => {
-      if (f.required && (formData[f.field] === undefined || formData[f.field] === "")) {
-        newErrors[f.field] = `${f.label} is required`;
+      const fieldKey = f.field || (f as any).name || (f as any).id;
+      if (!fieldKey) return;
+      if (f.required && (formData[fieldKey] === undefined || formData[fieldKey] === "" || formData[fieldKey] === null)) {
+        newErrors[fieldKey] = `${f.label} is required`;
       }
     });
 
@@ -304,12 +308,14 @@ export default function DynamicForm({
 
   // Helper to render an individual form field component
   const renderField = (f: FormField) => {
-    const hasError = !!errors[f.field];
-    const val = formData[f.field];
+    const fieldKey = f.field || (f as any).name || (f as any).id;
+    if (!fieldKey) return null;
+    const hasError = !!errors[fieldKey];
+    const val = formData[fieldKey];
 
     return (
       <div
-        key={f.field}
+        key={fieldKey}
         className={`flex flex-col gap-1.5 ${f.type === "textarea" || f.type === "editor" || f.type === "richtext" || f.type === "upload" ? "md:col-span-2" : ""}`}
       >
         <label className="text-xs font-bold text-slate-600">
@@ -320,7 +326,7 @@ export default function DynamicForm({
         {f.type === "text" && (
           <Input
             value={val || ""}
-            onChange={(e) => handleChange(f.field, e.value)}
+            onChange={(e) => handleChange(fieldKey, e.value)}
             placeholder={f.placeholder}
             className={`w-full rounded-md border-slate-300 focus:border-green-500 focus:ring-green-500 ${hasError ? "k-state-invalid border-red-500" : ""}`}
           />
@@ -330,7 +336,7 @@ export default function DynamicForm({
         {f.type === "number" && (
           <NumericTextBox
             value={val !== undefined && val !== "" ? Number(val) : null}
-            onChange={(e) => handleChange(f.field, e.value)}
+            onChange={(e) => handleChange(fieldKey, e.value)}
             placeholder={f.placeholder}
             format="0.0"
             className={`w-full rounded-md border-slate-300 focus:border-green-500 focus:ring-green-500 ${hasError ? "k-state-invalid border-red-500" : ""}`}
@@ -344,7 +350,7 @@ export default function DynamicForm({
             onChange={(e) => {
               const dateVal = e.value;
               const dateStr = dateVal ? dateVal.toISOString().split("T")[0] : "";
-              handleChange(f.field, dateStr);
+              handleChange(fieldKey, dateStr);
             }}
             format="yyyy-MM-dd"
             className={`w-full rounded-md border-slate-300 focus:border-green-500 focus:ring-green-500 ${hasError ? "k-state-invalid border-red-500" : ""}`}
@@ -358,7 +364,7 @@ export default function DynamicForm({
             textField="label"
             dataItemKey="value"
             value={f.options?.find((opt) => opt.value === val) || (typeof val === "string" ? { label: val, value: val } : null)}
-            onChange={(e) => handleChange(f.field, e.value?.value ?? e.value)}
+            onChange={(e) => handleChange(fieldKey, e.value?.value ?? e.value)}
             className={`w-full rounded-md border-slate-300 focus:border-green-500 focus:ring-green-500 ${hasError ? "k-state-invalid border-red-500" : ""}`}
           />
         )}
@@ -367,7 +373,7 @@ export default function DynamicForm({
         {f.type === "textarea" && (
           <TextArea
             value={val || ""}
-            onChange={(e) => handleChange(f.field, e.value)}
+            onChange={(e) => handleChange(fieldKey, e.value)}
             placeholder={f.placeholder}
             rows={3}
             className={`w-full rounded-md border-slate-300 focus:border-green-500 focus:ring-green-500 ${hasError ? "k-state-invalid border-red-500" : ""}`}
@@ -397,7 +403,7 @@ export default function DynamicForm({
               contentStyle={{ height: 260 }}
               defaultContent={val || ""}
               value={val || ""}
-              onChange={(e) => handleChange(f.field, e.html)}
+              onChange={(e) => handleChange(fieldKey, e.html)}
               className={`w-full rounded-md border-slate-300 ${hasError ? "k-state-invalid border-red-500" : ""}`}
             />
           </div>
@@ -428,7 +434,7 @@ export default function DynamicForm({
                   reader.onloadend = () => {
                     if (reader.result) {
                       const base64String = reader.result.toString().split(",")[1];
-                      handleChange(f.field, base64String);
+                      handleChange(fieldKey, base64String);
                     }
                   };
                   reader.readAsDataURL(fileObj);
@@ -441,7 +447,7 @@ export default function DynamicForm({
 
         {hasError && (
           <span className="text-xs text-rose-500 font-medium">
-            {errors[f.field]}
+            {errors[fieldKey]}
           </span>
         )}
       </div>

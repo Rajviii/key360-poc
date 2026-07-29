@@ -12,10 +12,11 @@ import { MetadataCache } from "@/services/caching";
 export interface ModuleConfig {
   id: string;
   title: string;
+  moduleName?: string;
   breadcrumbs: string[];
   endpoint: string;
   extends?: string;
-  views: string[];
+  views?: string[];
   defaultView?: string;
   permissions?: any;
   columnRefs?: any[];
@@ -34,9 +35,10 @@ export interface ModuleConfig {
     cache?: boolean;
   };
   // Compiled output fields
-  gridColumns: any[];
-  formFields: any[];
-  toolbarButtons: any[];
+  gridColumns?: any[];
+  formFields?: any[];
+  toolbarButtons?: any[];
+  dataItemKey?: string;
 }
 
 // Resolution Helper

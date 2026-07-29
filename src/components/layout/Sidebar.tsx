@@ -38,6 +38,11 @@ const groupIcons: Record<string, React.ReactNode> = {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
     ),
+    "Document Management": (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+    ),
     "Reports": (
         <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2" />
@@ -145,6 +150,7 @@ const globalExpandedState: Record<string, boolean> = {
     "Human Resources": false,
     "Project Management": false,
     "Operations": false,
+    "Document Management": false,
     "Reports": false,
     "Settings": false,
 };
@@ -218,6 +224,14 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
                     // { title: "Work Orders", route: workOrdersMeta.route, disabled: workOrdersMeta.disabled },
                     // { title: "Vendors", route: vendorsMeta.route, disabled: vendorsMeta.disabled },
                     { title: "Physical Items Register", route: "/physical-items" }
+                ]
+            },
+            {
+                name: "Document Management",
+                icon: groupIcons["Document Management"],
+                items: [
+                    { title: "Agreement Documents", route: "/agreements" },
+                    { title: "PDF Forms", route: "/pdf-forms" },
                 ]
             },
             {

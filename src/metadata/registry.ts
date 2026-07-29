@@ -155,11 +155,17 @@ import { projectPlanningService } from "@/services/projectPlanningService";
 import { physicalItemsService } from "@/services/physicalItemsService";
 import { cachedEmployeeService } from "@/services/employeeService";
 
+import { agreementModuleConfig } from "@/modules/document-management/config/agreement.config";
+import { pdfFormsModuleConfig } from "@/modules/document-management/config/pdfForms.config";
+import { agreementsService, pdfFormsService } from "@/services/documentManagementService";
+
 // Register default business modules
 ModuleRegistry.registerModule(timesheetModuleConfig, "/timesheet");
 ModuleRegistry.registerModule(projectPlanningModuleConfig, "/project-planning");
 ModuleRegistry.registerModule(physicalItemsModuleConfig, "/physical-items");
 ModuleRegistry.registerModule(employeeModuleConfig, "/employees");
+ModuleRegistry.registerModule(agreementModuleConfig, "/agreements");
+ModuleRegistry.registerModule(pdfFormsModuleConfig, "/pdf-forms");
 
 // Register concrete services wrapped in the caching layer
 import { CachingDataProvider } from "@/services/caching";
@@ -167,6 +173,8 @@ ModuleRegistry.registerService("timesheets", new CachingDataProvider(timesheetSe
 ModuleRegistry.registerService("project-planning", new CachingDataProvider(projectPlanningService, "project_planning_cache", 120));
 ModuleRegistry.registerService("physical-items", new CachingDataProvider(physicalItemsService, "physical_items_cache", 120));
 ModuleRegistry.registerService("employees", cachedEmployeeService);
+ModuleRegistry.registerService("agreements", new CachingDataProvider(agreementsService, "agreements_cache", 120));
+ModuleRegistry.registerService("pdf-forms", new CachingDataProvider(pdfFormsService, "pdf_forms_cache", 120));
 
 // Register demo placeholder modules to showcase high-efficiency metadata scaling
 ModuleRegistry.registerModule(resolveModuleConfig({
