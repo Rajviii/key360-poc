@@ -33,6 +33,8 @@ import {
 import { ContextMenu, MenuItem, MenuSelectEvent } from "@progress/kendo-react-layout";
 import { GridPDFExport, savePDF } from "@progress/kendo-react-pdf";
 import { Checkbox } from "@progress/kendo-react-inputs";
+import { DropDownList } from "@progress/kendo-react-dropdowns";
+import { FormPresets } from "@/metadata/presets";
 import {
   tableBodyIcon,
   tableUnmergeIcon,
@@ -118,10 +120,40 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
 
   const chartWizardData: ChartWizardDataRow[] = useMemo(() => {
     if (!showChartWizard || !gridRef.current) return [];
+
+    let targetData = data;
+    let targetSelect: Record<string | number, boolean | number[]> = select;
+    const selectedKeys = Object.keys(select).filter((k) => !!select[k]);
+
+    if (selectedKeys.length > 0) {
+      // If user selected rows (e.g. 100,000 rows), limit selection to top 500 rows for chart generation to prevent page unresponsiveness
+      const limitedKeys = selectedKeys.length > 500 ? selectedKeys.slice(0, 500) : selectedKeys;
+      const limitedSet = new Set(limitedKeys.map(String));
+
+      targetData = data.filter((item) => limitedSet.has(String(item[dataItemKey])));
+
+      const cappedSelect: Record<string | number, boolean> = {};
+      for (let i = 0; i < limitedKeys.length; i++) {
+        cappedSelect[limitedKeys[i]] = true;
+      }
+      targetSelect = cappedSelect;
+    } else if (data && data.length > 500) {
+      // If no explicit selection and dataset is large, sample/cap at 500 rows to prevent main thread rendering freeze
+      const step = Math.ceil(data.length / 500);
+      const sampled: any[] = [];
+      const sampledSelect: Record<string | number, boolean> = {};
+      for (let i = 0; i < data.length && sampled.length < 500; i += step) {
+        sampled.push(data[i]);
+        sampledSelect[data[i][dataItemKey]] = true;
+      }
+      targetData = sampled;
+      targetSelect = sampledSelect;
+    }
+
     return getWizardDataFromGridSelection({
       grid: gridRef.current,
-      data: data,
-      selectedState: select,
+      data: targetData,
+      selectedState: targetSelect,
       dataItemKey: dataItemKey
     });
   }, [showChartWizard, data, select, dataItemKey]);
@@ -164,7 +196,16 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
   }, [contextMenuItem, dataItemKey]);
 
   const handleSelectAllRows = useCallback(() => {
-    setSelect(data.reduce((acc, item) => ({ ...acc, [item[dataItemKey]]: true }), {}));
+    if (!data || data.length === 0) {
+      setSelect({});
+      return;
+    }
+    // Fast O(N) single-pass allocation instead of O(N^2) object spread loops
+    const newSelect: Record<string | number, boolean> = {};
+    for (let i = 0; i < data.length; i++) {
+      newSelect[data[i][dataItemKey]] = true;
+    }
+    setSelect(newSelect);
   }, [data, dataItemKey]);
 
   const handleClearSelection = useCallback(() => {
@@ -551,17 +592,41 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
     }));
   };
 
-  // Status Badge Renderer
+  // Status Badge & DropDown Editor Renderer
   const StatusCell = (props: any) => {
+    const status = props.dataItem[props.field] || "";
+
     if (props.rowType === "edit" || props.dataItem.inEdit) {
+      const statusOptions = [
+        { label: "Approved", value: "Approved" },
+        { label: "Pending Approval", value: "Pending Approval" },
+        { label: "Draft", value: "Draft" },
+        { label: "Rejected", value: "Rejected" },
+      ];
+
+      const currentOpt = statusOptions.find((o) => o.value === status) || { label: status, value: status };
+
       return (
-        <td {...props.tdProps} className={`px-6 py-4 whitespace-nowrap text-sm ${props.tdProps?.className || ""}`}>
-          {props.children}
+        <td {...props.tdProps} className={`px-4 py-2 whitespace-nowrap text-sm ${props.tdProps?.className || ""}`}>
+          <DropDownList
+            data={statusOptions}
+            textField="label"
+            dataItemKey="value"
+            value={currentOpt}
+            onChange={(e: any) => {
+              const val = e.value ? (typeof e.value === "object" ? e.value.value : e.value) : e.target?.value;
+              handleItemChange({
+                dataItem: props.dataItem,
+                field: props.field,
+                value: val,
+              });
+            }}
+            className="w-full text-xs font-semibold"
+          />
         </td>
       );
     }
 
-    const status = props.dataItem[props.field] || "";
     let badgeClass = "bg-slate-100 text-slate-700 border-slate-300";
 
     if (status === "Approved") {
@@ -577,6 +642,48 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeClass}`}>
           {status}
         </span>
+      </td>
+    );
+  };
+
+  // Generic Select / Dropdown Cell Renderer
+  const SelectCell = (props: any) => {
+    const rawVal = props.dataItem[props.field] || "";
+    const rawOptions: any[] = props.options || (FormPresets as any)[props.field]?.options || [];
+    const formattedOptions = rawOptions.map((opt) =>
+      typeof opt === "string" ? { label: opt, value: opt } : opt
+    );
+
+    if (props.rowType === "edit" || props.dataItem.inEdit) {
+      const currentOpt = formattedOptions.find((o) => o.value === rawVal) || { label: String(rawVal), value: rawVal };
+
+      return (
+        <td {...props.tdProps} className={`px-4 py-2 whitespace-nowrap text-sm ${props.tdProps?.className || ""}`}>
+          <DropDownList
+            data={formattedOptions}
+            textField="label"
+            dataItemKey="value"
+            value={currentOpt}
+            onChange={(e: any) => {
+              const val = e.value ? (typeof e.value === "object" ? e.value.value : e.value) : e.target?.value;
+              handleItemChange({
+                dataItem: props.dataItem,
+                field: props.field,
+                value: val,
+              });
+            }}
+            className="w-full text-xs font-semibold"
+          />
+        </td>
+      );
+    }
+
+    const matched = formattedOptions.find((o) => o.value === rawVal);
+    const displayLabel = matched ? matched.label : rawVal;
+
+    return (
+      <td {...props.tdProps} className={`px-6 py-4 whitespace-nowrap text-sm text-slate-700 ${props.tdProps?.className || ""}`}>
+        {displayLabel}
       </td>
     );
   };
@@ -891,8 +998,14 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
             let cellRenderer = undefined;
             let editorType: "text" | "numeric" | "date" | "boolean" = "text";
 
-            if (col.type === "badge") {
+            const formPreset = (FormPresets as any)[col.field];
+            const hasOptions = col.options || formPreset?.options;
+
+            if (col.type === "badge" || col.field === "status") {
               cellRenderer = StatusCell;
+            } else if (hasOptions || col.type === "select") {
+              const opts = col.options || formPreset?.options;
+              cellRenderer = (props: any) => <SelectCell {...props} options={opts} />;
             } else if (col.type === "date") {
               cellRenderer = DateCell;
               editorType = "date";
