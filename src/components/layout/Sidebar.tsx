@@ -138,19 +138,35 @@ interface SidebarCategory {
     items: SidebarItem[];
 }
 
+// Persistent expanded state across Next.js client-side route transitions
+const globalExpandedState: Record<string, boolean> = {
+    "Core": false,
+    "Favorites": false,
+    "Human Resources": false,
+    "Project Management": false,
+    "Operations": false,
+    "Reports": false,
+    "Settings": false,
+};
+
 export default function Sidebar({ expanded = true }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
 
-    // Explicit expanded state mapping to fully utilize Kendo's dynamic collapsing categories
-    const [expandedStates, setExpandedStates] = useState<Record<string, boolean>>({
-        "Core": true,
-        "Favorites": true,
-        "Human Resources": true,
-        "Project Management": true,
-        "Operations": true,
-        "Reports": true,
+    const [expandedStates, setExpandedStates] = useState<Record<string, boolean>>(() => {
+        const init = { ...globalExpandedState };
+        if (pathname === "/") init["Core"] = true;
+        return init;
     });
+
+    // Helper to update both React state and module-level persistent state
+    const updateExpanded = (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => {
+        setExpandedStates((prev) => {
+            const next = updater(prev);
+            Object.assign(globalExpandedState, next);
+            return next;
+        });
+    };
 
     // Categories list dynamically matched against registered modules
     const categoriesList: SidebarCategory[] = useMemo(() => {
@@ -215,18 +231,23 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
         ];
     }, []);
 
-    // Initialize expanded states once based on active URL route matches
+    // Ensure category containing the active route is expanded without closing previously opened categories
     useEffect(() => {
-        const updated = { ...expandedStates };
-        categoriesList.forEach((category) => {
-            const hasActiveChild = category.items.some(
-                (item) => item.route !== "#" && (pathname === item.route || pathname?.startsWith(item.route))
-            );
-            if (hasActiveChild) {
-                updated[category.name] = true;
+        updateExpanded((prev) => {
+            const updated = { ...prev };
+            if (pathname === "/") {
+                updated["Core"] = true;
             }
+            categoriesList.forEach((category) => {
+                const hasActiveChild = category.items.some(
+                    (item) => item.route !== "#" && (pathname === item.route || pathname?.startsWith(item.route))
+                );
+                if (hasActiveChild) {
+                    updated[category.name] = true;
+                }
+            });
+            return updated;
         });
-        setExpandedStates(updated);
     }, [pathname, categoriesList]);
 
     // Handle panel selection & toggles
@@ -238,7 +259,7 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
         if (route && route !== "#" && !disabled) {
             router.push(route);
         } else if (categoryName) {
-            setExpandedStates((prev) => ({
+            updateExpanded((prev) => ({
                 ...prev,
                 [categoryName]: !prev[categoryName]
             }));
@@ -259,7 +280,7 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
             {/* Scrollable Navigation Area */}
             <div className="flex-1 overflow-y-auto py-4 px-3 min-w-[16rem]">
                 <div className="panelbar-wrapper w-full">
-                    <PanelBar onSelect={handleSelect} className="bg-transparent border-none">
+                    <PanelBar expandMode="multiple" onSelect={handleSelect} className="bg-transparent border-none">
 
                         {/* 1. Core Section (Standalone Dashboard link) */}
                         <PanelBarItem
@@ -330,7 +351,7 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
                             </PanelBarItem>
                         ))}
 
-                        {/* 3. Settings Collapsed Section */}
+                        {/* 3. Settings Section */}
                         <PanelBarItem
                             categoryName="Settings"
                             title={
@@ -339,9 +360,32 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
                                     <span>Settings</span>
                                 </span>
                             }
-                            expanded={false}
+                            expanded={!!expandedStates["Settings"]}
                             className="panelbar-header-group"
-                        />
+                        >
+                            <PanelBarItem
+                                title={
+                                    <span className="flex items-center gap-2.5">
+                                        {groupIcons["Settings"]}
+                                        <span>General Settings</span>
+                                    </span>
+                                }
+                                route="#"
+                                disabled={true}
+                                className="panelbar-child-item"
+                            />
+                            <PanelBarItem
+                                title={
+                                    <span className="flex items-center gap-2.5">
+                                        {groupIcons["Settings"]}
+                                        <span>System Preferences</span>
+                                    </span>
+                                }
+                                route="#"
+                                disabled={true}
+                                className="panelbar-child-item"
+                            />
+                        </PanelBarItem>
                     </PanelBar>
                 </div>
             </div>

@@ -22,6 +22,7 @@ import { Popup } from "@progress/kendo-react-popup";
 import { CustomColumnMenu } from "./CustomColumnMenu";
 import { GridColumn } from "@/types/metadata";
 import { AIPromptOutputInterface } from "@progress/kendo-react-conversational-ui";
+import { useNotification } from "@/context/NotificationContext";
 
 // Premium Chart Integration imports
 import {
@@ -102,6 +103,7 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
   },
   ref
 ) {
+  const { showSuccess, showInfo } = useNotification();
   // Premium Chart Integration states & refs
   const gridRef = useRef<GridHandle>(null);
   const pdfExportRef = useRef<GridPDFExport | null>(null);
@@ -564,6 +566,7 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
       });
 
       await onSave(itemToSave[dataItemKey], payload);
+      showSuccess("Inline row changes saved successfully.");
     }
     const updatedData = gridData.map((item) =>
       item[dataItemKey] === itemToSave[dataItemKey]
@@ -571,7 +574,7 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
         : item
     );
     setGridData(updatedData);
-  }, [gridData, dataItemKey, onSave, columns]);
+  }, [gridData, dataItemKey, onSave, columns, showSuccess]);
 
   // Derive the edit state descriptor from gridData for KendoReact Grid v15+
   const editState = useMemo(() => {

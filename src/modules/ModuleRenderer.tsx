@@ -12,6 +12,7 @@ import TimesheetForm from "@/components/form/TimesheetForm"; // Kept for safety/
 import { ModuleConfig } from "@/metadata/engine";
 import { PDFViewer } from "@progress/kendo-react-pdf-viewer";
 import { SvgIcon } from "@progress/kendo-react-common";
+import { useNotification } from "@/context/NotificationContext";
 
 interface ModuleRendererProps {
   config: ModuleConfig;
@@ -19,6 +20,7 @@ interface ModuleRendererProps {
 }
 
 export default function ModuleRenderer({ config, service }: ModuleRendererProps) {
+  const { showSuccess, showError, showInfo, showWarning } = useNotification();
   const [data, setData] = useState<any[]>([]);
   const [dependencies, setDependencies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,24 +89,29 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
   const handleToolbarAction = async (actionType: string) => {
     if (actionType === "add") {
       if (!permissions.create) {
-        alert("Permission Denied: You cannot create new entries.");
+        showWarning("Permission Denied: You cannot create new entries.");
         return;
       }
       setDialogMode("add");
     } else if (actionType === "refresh") {
       await fetchData();
+      showInfo("Table data refreshed.");
     } else if (actionType === "delete") {
       if (!permissions.delete) {
-        alert("Permission Denied: You cannot delete records.");
+        showWarning("Permission Denied: You cannot delete records.");
         return;
       }
       if (selectedItem) {
         await handleDelete(selectedItem);
+      } else {
+        showInfo("Please select a record to delete.");
       }
     } else if (actionType === "export") {
+      showInfo("Exporting dataset to Excel...");
       handleExport();
     } else if (actionType === "exportPdf") {
       if (gridPdfRef.current) {
+        showInfo("Generating PDF document export...");
         gridPdfRef.current.exportPDF();
       }
     }
@@ -113,7 +120,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
   // Handle Edit Action on Row / Gantt item
   const handleEditInitiate = (item: any) => {
     if (!permissions.update) {
-      alert("Permission Denied: You do not have permission to modify records.");
+      showWarning("Permission Denied: You do not have permission to modify records.");
       return;
     }
     const itemWithParent = { ...item };
@@ -138,7 +145,7 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
   // Handle Delete Action on Row
   const handleDelete = async (item: any) => {
     if (!permissions.delete) {
-      alert("Permission Denied: You do not have permission to delete records.");
+      showWarning("Permission Denied: You do not have permission to delete records.");
       return;
     }
     const displayName = item.employeeName || item.title || item.id;
@@ -147,10 +154,14 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
       try {
         const success = await service.delete(item.id);
         if (success) {
+          showSuccess(`Record (${displayName}) deleted successfully.`);
           await fetchData();
+        } else {
+          showError(`Failed to delete record (${displayName}).`);
         }
       } catch (err) {
         console.error("Failed to delete record:", err);
+        showError("An error occurred while deleting the record.");
       } finally {
         setLoading(false);
       }
@@ -172,13 +183,16 @@ export default function ModuleRenderer({ config, service }: ModuleRendererProps)
 
       if (dialogMode === "add") {
         await service.create(payload);
+        showSuccess("New record added successfully.");
       } else if (dialogMode === "edit" && selectedItem) {
         await service.update(selectedItem.id, payload);
+        showSuccess("Record updated successfully.");
       }
       setDialogMode("none");
       await fetchData();
     } catch (err) {
       console.error("Failed to save record:", err);
+      showError("Failed to save record. Please check inputs.");
     } finally {
       setLoading(false);
     }
