@@ -19,7 +19,8 @@ export interface GridColumn {
   resizable?: boolean;
   reorderable?: boolean;
   format?: string; // date formats or currency formats
-  type?: "text" | "number" | "date" | "badge" | "actions" | "pdf" | "editor" | "richtext";
+  type?: "text" | "number" | "date" | "badge" | "actions" | "pdf" | "editor" | "richtext" | "select" | "boolean";
+  options?: { label: string; value: any }[];
 }
 
 export interface ToolbarButton {

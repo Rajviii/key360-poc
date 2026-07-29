@@ -191,16 +191,16 @@ export default function Sidebar({ expanded = true }: SidebarProps) {
                 items: [
                     { title: "Projects", route: "#", disabled: true },
                     { title: "Project Planning (Gantt)", route: "/project-planning" },
-                    { title: "Tasks", route: "#", disabled: true }
+                    // { title: "Tasks", route: "#", disabled: true }
                 ]
             },
             {
                 name: "Operations",
                 icon: groupIcons["Operations"],
                 items: [
-                    { title: "Assets", route: assetsMeta.route, disabled: assetsMeta.disabled },
-                    { title: "Work Orders", route: workOrdersMeta.route, disabled: workOrdersMeta.disabled },
-                    { title: "Vendors", route: vendorsMeta.route, disabled: vendorsMeta.disabled },
+                    // { title: "Assets", route: assetsMeta.route, disabled: assetsMeta.disabled },
+                    // { title: "Work Orders", route: workOrdersMeta.route, disabled: workOrdersMeta.disabled },
+                    // { title: "Vendors", route: vendorsMeta.route, disabled: vendorsMeta.disabled },
                     { title: "Physical Items Register", route: "/physical-items" }
                 ]
             },
