@@ -135,18 +135,34 @@ export default function ModuleToolbar({
                         >
                             <span className="hidden sm:inline ml-1">Grid</span>
                         </Button>
-                        <Button
-                            type="button"
-                            size="small"
-                            fillMode={activeView === "gantt" ? "solid" : "flat"}
-                            themeColor={activeView === "gantt" ? "primary" : "base"}
-                            svgIcon={chartLineIcon}
-                            title="Gantt View"
-                            onClick={() => onViewChange("gantt")}
-                            className="font-medium text-xs rounded-md cursor-pointer px-2.5 py-1"
-                        >
-                            <span className="hidden sm:inline ml-1">Gantt</span>
-                        </Button>
+                        {availableViews.includes("gantt") && (
+                            <Button
+                                type="button"
+                                size="small"
+                                fillMode={activeView === "gantt" ? "solid" : "flat"}
+                                themeColor={activeView === "gantt" ? "primary" : "base"}
+                                svgIcon={chartLineIcon}
+                                title="Gantt View"
+                                onClick={() => onViewChange("gantt")}
+                                className="font-medium text-xs rounded-md cursor-pointer px-2.5 py-1"
+                            >
+                                <span className="hidden sm:inline ml-1">Gantt</span>
+                            </Button>
+                        )}
+                        {availableViews.includes("taskboard") && (
+                            <Button
+                                type="button"
+                                size="small"
+                                fillMode={activeView === "taskboard" ? "solid" : "flat"}
+                                themeColor={activeView === "taskboard" ? "primary" : "base"}
+                                svgIcon={plusIcon}
+                                title="Task Board View"
+                                onClick={() => onViewChange("taskboard")}
+                                className="font-medium text-xs rounded-md cursor-pointer px-2.5 py-1"
+                            >
+                                <span className="hidden sm:inline ml-1">Task Board</span>
+                            </Button>
+                        )}
                     </div>
                 )}
 

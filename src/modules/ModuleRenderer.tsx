@@ -6,11 +6,13 @@ import ContentLayout from "@/components/layout/ContentLayout";
 import ModuleToolbar from "@/components/toolbar/ModuleToolbar";
 import GenericGrid, { GenericGridRef } from "@/components/grid/GenericGrid";
 import GenericGantt from "@/components/grid/GenericGantt";
+import TaskBoardView from "@/components/taskboard/TaskBoardView";
 import FormDialog from "@/components/dialogs/FormDialog";
 import DynamicForm from "@/components/form/DynamicForm";
 import TimesheetForm from "@/components/form/TimesheetForm"; // Kept for safety/parity reference
 import { ModuleConfig } from "@/metadata/engine";
 import { PDFViewer as CustomPDFViewer } from "@/components/pdf/PDFViewer";
+import { StandardPDFLibViewer } from "@/components/pdf/StandardPDFLibViewer";
 import { SvgIcon } from "@progress/kendo-react-common";
 import { useNotification } from "@/context/NotificationContext";
 
@@ -36,6 +38,9 @@ export default function ModuleRenderer({ config, service, onCustomAction }: Modu
   const [activePdfItem, setActivePdfItem] = useState<any | null>(null);
   const [loadMetrics, setLoadMetrics] = useState<{ loadTimeMs: number; cacheHit: boolean }>({ loadTimeMs: 0, cacheHit: false });
   const [repeatHeaders, setRepeatHeaders] = useState(true);
+
+  // KPI Visualization mode: "compact" (default - saves ~140px vertical height), "cards" (expanded), or "hidden"
+  const [kpiMode, setKpiMode] = useState<"compact" | "cards" | "hidden">("compact");
 
   // Reset activeView if module config changes
   useEffect(() => {
@@ -361,31 +366,104 @@ export default function ModuleRenderer({ config, service, onCustomAction }: Modu
             </div>
           )} */}
 
-          {/* Dynamic Module-specific KPI Stats Row */}
-          {stats && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {stats.map((stat, i) => (
-                <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between hover:shadow-md transition-all duration-200">
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-                      {stat.label}
-                    </span>
-                    <h3 className={`text-2xl font-extrabold tracking-tight ${stat.color}`}>
-                      {stat.value}
-                    </h3>
-                    <p className="text-[11px] text-slate-400 font-medium">
-                      {stat.subtext}
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-xl shadow-sm border border-slate-100 text-slate-700">
-                    {typeof stat.icon === "string" ? (
-                      stat.icon
-                    ) : (
-                      <SvgIcon icon={stat.icon} size="medium" />
-                    )}
+          {/* Dynamic Module-specific KPI Bar / Cards */}
+          {stats && kpiMode !== "hidden" && (
+            kpiMode === "compact" ? (
+              /* Compact Horizontal Summary Strip (Saves ~140px vertical space for grid) */
+              <div className="bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+                <div className="flex items-center gap-5 flex-wrap divide-x divide-slate-100">
+                  {stats.map((stat, i) => (
+                    <div key={i} className={`flex items-center gap-2.5 ${i > 0 ? "pl-5" : ""}`}>
+                      <div className="w-7 h-7 rounded-md bg-slate-50 flex items-center justify-center text-sm shadow-xs border border-slate-100 text-slate-700">
+                        {typeof stat.icon === "string" ? stat.icon : <SvgIcon icon={stat.icon} size="small" />}
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          {stat.label}:
+                        </span>
+                        <span className={`text-sm font-extrabold tracking-tight ${stat.color}`}>
+                          {stat.value}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setKpiMode("cards")}
+                    className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1"
+                    title="Expand to large cards"
+                  >
+                    <span>Cards</span> 🗂️
+                  </button>
+                  <button
+                    onClick={() => setKpiMode("hidden")}
+                    className="text-[11px] font-bold text-slate-400 hover:text-slate-600 px-1.5 py-1 cursor-pointer"
+                    title="Hide KPI bar"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Expanded Cards Grid View */
+              <div className="space-y-2 animate-fade-in">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Key Performance Metrics</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setKpiMode("compact")}
+                      // className="text-xs font-semibold text-white hover:text-green-800 bg-green-600 px-2.5 py-1 rounded-md border border-green-200 transition-colors cursor-pointer"
+                      className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      ⚡ Compact Bar
+                    </button>
+                    <button
+                      onClick={() => setKpiMode("hidden")}
+                      className="text-xs font-bold text-slate-400 hover:text-slate-600 px-1 cursor-pointer"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
-              ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  {stats.map((stat, i) => (
+                    <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between hover:shadow-md transition-all duration-200">
+                      <div className="space-y-1.5">
+                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+                          {stat.label}
+                        </span>
+                        <h3 className={`text-2xl font-extrabold tracking-tight ${stat.color}`}>
+                          {stat.value}
+                        </h3>
+                        <p className="text-[11px] text-slate-400 font-medium">
+                          {stat.subtext}
+                        </p>
+                      </div>
+                      <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-xl shadow-sm border border-slate-100 text-slate-700">
+                        {typeof stat.icon === "string" ? (
+                          stat.icon
+                        ) : (
+                          <SvgIcon icon={stat.icon} size="medium" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          )}
+
+          {/* Show KPIs toggle if hidden */}
+          {stats && kpiMode === "hidden" && (
+            <div className="flex justify-end -mb-4">
+              <button
+                onClick={() => setKpiMode("compact")}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 bg-white border border-slate-200 px-3 py-1 rounded-lg shadow-2xs hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <span>📊 Show KPI Metrics</span>
+              </button>
             </div>
           )}
 
@@ -416,7 +494,9 @@ export default function ModuleRenderer({ config, service, onCustomAction }: Modu
               </div>
             )}
 
-            {activeView === "gantt" ? (
+            {activeView === "taskboard" ? (
+              <TaskBoardView />
+            ) : activeView === "gantt" ? (
               <GenericGantt
                 data={data}
                 dependencies={dependencies}
@@ -505,36 +585,45 @@ export default function ModuleRenderer({ config, service, onCustomAction }: Modu
 
         {/* PDF Viewer & Signature Modal */}
         {activePdfItem && (
-          <CustomPDFViewer
-            isOpen={!!activePdfItem}
-            onClose={() => setActivePdfItem(null)}
-            documentItem={{
-              id: activePdfItem.id,
-              title: activePdfItem.title || activePdfItem.name || `Document #${activePdfItem.id}`,
-              type: config.id === "agreements" ? "agreement" : "pdf-form",
-              status: activePdfItem.status || "Draft",
-              vendor: activePdfItem.vendor,
-              createdDate: activePdfItem.createdDate,
-              documentPdf: activePdfItem.documentPdf,
-              signatures: activePdfItem.signatures || [],
-              texts: activePdfItem.texts || [],
-              highlights: activePdfItem.highlights || [],
-              comments: activePdfItem.comments || [],
-              formValues: activePdfItem,
-            }}
-            viewerOptions={(config as any).viewerOptions}
-            editorOptions={(config as any).editorOptions}
-            formOptions={(config as any).formOptions}
-            onSaveDocument={async (id, updates) => {
-              try {
-                await service.update(id, updates);
-                showSuccess("Document annotations and signature updated successfully.");
-                await fetchData();
-              } catch (err) {
-                console.error("Failed to save document updates:", err);
-              }
-            }}
-          />
+          config.id === "agreements" || config.id === "pdf-forms" ? (
+            <CustomPDFViewer
+              isOpen={!!activePdfItem}
+              onClose={() => setActivePdfItem(null)}
+              documentItem={{
+                id: activePdfItem.id,
+                title: activePdfItem.title || activePdfItem.name || `Document #${activePdfItem.id}`,
+                type: config.id === "agreements" ? "agreement" : "pdf-form",
+                status: activePdfItem.status || "Draft",
+                vendor: activePdfItem.vendor,
+                createdDate: activePdfItem.createdDate,
+                documentPdf: activePdfItem.documentPdf,
+                signatures: activePdfItem.signatures || [],
+                texts: activePdfItem.texts || [],
+                highlights: activePdfItem.highlights || [],
+                comments: activePdfItem.comments || [],
+                formValues: activePdfItem,
+              }}
+              viewerOptions={(config as any).viewerOptions}
+              editorOptions={(config as any).editorOptions}
+              formOptions={(config as any).formOptions}
+              onSaveDocument={async (id, updates) => {
+                try {
+                  await service.update(id, updates);
+                  showSuccess("Document annotations and signature updated successfully.");
+                  await fetchData();
+                } catch (err) {
+                  console.error("Failed to save document updates:", err);
+                }
+              }}
+            />
+          ) : (
+            <StandardPDFLibViewer
+              isOpen={!!activePdfItem}
+              onClose={() => setActivePdfItem(null)}
+              item={activePdfItem}
+              moduleTitle={config.title}
+            />
+          )
         )}
       </ContentLayout>
     </AppLayout>

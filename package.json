@@ -29,6 +29,7 @@
     "@progress/kendo-react-pdf": "^15.1.0",
     "@progress/kendo-react-pdf-viewer": "^15.1.0",
     "@progress/kendo-react-upload": "^15.1.0",
+    "@progress/kendo-react-treeview": "^15.1.0",
     "@progress/kendo-svg-icons": "^5.4.0",
     "@progress/kendo-theme-default": "^14.4.0",
     "@tanstack/react-query": "^5.66.0",

@@ -170,7 +170,7 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
 
   const onSelectionChange = useCallback(
     (event: GridSelectionChangeEvent) => {
-      setSelect(event.select);
+      // Left-click row selection disabled so left-clicking does not green records or disrupt inline dropdowns, calendars, and edit controls
     },
     []
   );
@@ -181,8 +181,17 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
       offset.current = { left: e.pageX, top: e.pageY };
       setShowContextMenu(true);
       setContextMenuItem(dataItem);
+      // Select & green record on right-click for chart generation
+      if (dataItem && dataItem[dataItemKey] !== undefined) {
+        setSelect({
+          [dataItem[dataItemKey]]: true,
+        });
+        if (onRowClick) {
+          onRowClick(dataItem);
+        }
+      }
     },
-    []
+    [dataItemKey, onRowClick]
   );
 
   const handleCloseMenu = useCallback(() => {
@@ -843,7 +852,7 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
           </Button>
         )}
         <Button
-          svgIcon={pencilIcon}
+          svgIcon={hyperlinkOpenIcon}
           title="Edit Record (Popup)"
           onClick={(e) => {
             e.stopPropagation();
@@ -852,7 +861,7 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
           className="p-1.5 hover:bg-emerald-50 rounded text-emerald-600 hover:text-emerald-800 border-none bg-transparent cursor-pointer"
         />
         <Button
-          svgIcon={hyperlinkOpenIcon}
+          svgIcon={pencilIcon}
           title="Quick Edit (Inline)"
           onClick={(e) => {
             e.stopPropagation();
@@ -912,11 +921,17 @@ const GenericGrid = React.forwardRef<GenericGridRef, GenericGridProps>(function 
         className="k-grid-flat border-none"
         onRowClick={(e) => {
           const target = e.syntheticEvent.target as HTMLElement;
-          if (target.closest('.actions-cell') || target.tagName === 'BUTTON') {
+          if (
+            target.closest('.actions-cell') ||
+            target.tagName === 'BUTTON' ||
+            target.closest('button') ||
+            target.closest('.k-dropdownlist') ||
+            target.closest('.k-datepicker') ||
+            target.closest('.k-input') ||
+            target.closest('input') ||
+            target.closest('select')
+          ) {
             return;
-          }
-          if (onRowClick && !e.dataItem.items) {
-            onRowClick(e.dataItem);
           }
         }}
       >

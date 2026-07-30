@@ -166,6 +166,51 @@ ModuleRegistry.registerModule(physicalItemsModuleConfig, "/physical-items");
 ModuleRegistry.registerModule(employeeModuleConfig, "/employees");
 ModuleRegistry.registerModule(agreementModuleConfig, "/agreements");
 ModuleRegistry.registerModule(pdfFormsModuleConfig, "/pdf-forms");
+ModuleRegistry.registerModule(resolveModuleConfig({
+  id: "leave-management",
+  extends: "base",
+  title: "Leave Management",
+  breadcrumbs: ["Human Resources", "Leave Management"],
+  endpoint: "leave-management",
+  columnRefs: ["id", "title"],
+  fieldRefs: ["title"],
+}), "/leave-management");
+ModuleRegistry.registerModule(resolveModuleConfig({
+  id: "reports",
+  extends: "base",
+  title: "Reports",
+  breadcrumbs: ["Reports", "Report Dashboard"],
+  endpoint: "reports",
+  columnRefs: ["id", "title"],
+  fieldRefs: ["title"],
+}), "/reports");
+ModuleRegistry.registerModule(resolveModuleConfig({
+  id: "analytics",
+  extends: "base",
+  title: "Analytics",
+  breadcrumbs: ["Reports", "Analytics"],
+  endpoint: "analytics",
+  columnRefs: ["id", "title"],
+  fieldRefs: ["title"],
+}), "/analytics");
+ModuleRegistry.registerModule(resolveModuleConfig({
+  id: "settings",
+  extends: "base",
+  title: "Settings",
+  breadcrumbs: ["Settings", "General Settings"],
+  endpoint: "settings",
+  columnRefs: ["id", "title"],
+  fieldRefs: ["title"],
+}), "/settings");
+ModuleRegistry.registerModule(resolveModuleConfig({
+  id: "system-preferences",
+  extends: "base",
+  title: "System Preferences",
+  breadcrumbs: ["System", "System Preferences"],
+  endpoint: "system-preferences",
+  columnRefs: ["id", "title"],
+  fieldRefs: ["title"],
+}), "/system-preferences");
 
 // Register concrete services wrapped in the caching layer
 import { CachingDataProvider } from "@/services/caching";

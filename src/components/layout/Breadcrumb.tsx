@@ -23,7 +23,9 @@ export default function BreadcrumbComponent({ items }: BreadcrumbProps) {
   }, [items]);
 
   const handleItemSelect = (event: any) => {
-    const itemIndex = data.findIndex((curValue) => curValue.id === event.target.props.id);
+    const targetId = event?.id || event?.item?.id || event?.target?.props?.id;
+    if (!targetId) return;
+    const itemIndex = data.findIndex((curValue) => curValue.id === targetId);
     if (itemIndex !== -1) {
       const newData = data.slice(0, itemIndex + 1);
       setData(newData);
